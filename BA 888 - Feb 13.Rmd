@@ -24,6 +24,16 @@ library(ggthemes)
 -Yelp’s terabytes of historical data on restaurants’ reviews, check-ins, and special attributes have led to the ability to uncover valuable trends to aid businesses in understanding their impact on customers and what make customers tick.   
 -How can a restaurant leverage information on Yelp to increase their chances of attaining their business goals and preventing permanent closure? What aspects make customers choose a restaurant over its competitors? 
 
+### Data Source   
+We got our data from Kaggle, and there are 4 datasets in total, namely, resuaurant and business,users,and checkin.
+
+### Summary of data
+-Yelp business dataset about business types, attributes, location,  review count, and stars 
+-User dataset about reviews on each restaurant or service: text, rating and reactions (useful, cool, funny)
+-Check-ins datasets is for business.
+-Resuaurant dataset about resuaurant category, attributes, location, stars rating, review  count, and open hours.
+
+
 #################### sample ####################
 ```{r}
 yelp = stream_in(file("business.json"))
