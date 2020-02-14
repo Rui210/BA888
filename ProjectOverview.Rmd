@@ -1,5 +1,5 @@
 ---
-title: "Project Overview"
+title: "Project Overview - Can Yelp Reviews Save the Restaurant Industry?"
 author: "Xinman Liu, Melissa Putur, Jiao Sun, Adil Bin Wahab, Rui Xu"
 date: "2/14/2020"
 output: pdf_document
