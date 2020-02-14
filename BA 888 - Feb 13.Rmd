@@ -1,0 +1,193 @@
+---
+title: "BA888-Feb 13"
+author: "Team 6"
+date: "2/13/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(tidyverse)
+library(jsonlite)
+library(tidytext)
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(ggthemes)
+library(readr)
+```
+
+### Business Problem   
+Finding restaurants through directory services apps and review forum apps have become a crucial part of business discovery. It has changed the way restaurants of different tiers attain brand loyalty and market themselves.   
+
+Yelp’s terabytes of historical data on restaurants’ reviews, check-ins, and special attributes have led to the ability to uncover valuable trends to aid businesses in understanding their impact on customers and what make customers tick.   
+
+How can a restaurant leverage information on Yelp to increase their chances of attaining their business goals and preventing permanent closure? What aspects make customers choose a restaurant over its competitors? 
+
+### Data Source   
+We got our data from Kaggle, and there are 4 datasets in total, namely, business dataset, check-in, reviews, and users.
+
+### Summary of data
+**Business Dataset:** For the project we are only interested in exploring reviews, star ratings, and interactions with restaurants. The business dataset contains information for all business reviewed by yelp. To narrow down this dataset we manually reviewed the top 1,000 phrases that businesses were tagged with to identify phrases that would be a good fit for restaurant. We filtered the complete list to only include businesses that were tagged with the phrases “food” and/or “restaurant”. Using these phrases we were able to identify ~75,000 restaurants.
+**Review Dataset:** The review dataset contains reviews for all businesses on Yelp. We reduced the review dataset to only include reviews for restaurants (as identified by the above processing steps). After this reduction the dataset contained over 4 million reviews.
+**Check-In Dataset:** The check-in dataset was structured so that each business was represented as a row with a comma separated list of check-ins by date. To make the data easier to work with we rearranged it so that each check-in was represented as a row rather than a list.
+
+-Yelp business dataset about business types, attributes, location,  review count, and stars 
+-User dataset about reviews on each restaurant or service: text, rating and reactions (useful, cool, funny)
+-Check-ins datasets is for business.
+-Resuaurant dataset about resuaurant category, attributes, location, stars rating, review  count, and open hours.
+
+#################### sample ####################
+```{r}
+yelp = stream_in(file("business.json"))
+yelp_flat = flatten(yelp)
+yelp_buss = as.data.frame(yelp_flat)
+
+write_csv(yelp_buss, "yelpbusiness.csv")
+data = read_csv("yelpbusiness.csv")
+
+data1 = data[1:500, ]
+df1 = data1 %>%
+ select(1:12) %>%
+ mutate(categories = str_to_lower(categories)) %>%
+ filter(str_detect(categories, "restaurants"))
+
+df2 = data1 %>%
+ select(1:12) %>%
+ mutate(categories = str_to_lower(categories))
+
+df3 = anti_join(df2, df1)
+df1_1 = df3 %>%
+  filter(str_detect(categories,"food"))
+df1_2 = rbind(df1, df1_1)
+
+## check the restaurant businesses
+df3_1 = anti_join(df2, df1_2)
+df4 = df3_1 %>%
+  separate(categories, into = paste0("v", 1:100))
+df4 = df4[colSums(!is.na(df4)) > 0] 
+words = df4 %>%
+  pivot_longer(cols = v1:v24,
+               names_to = "pos",
+               values_to = "token",
+               values_drop_na = TRUE) %>% 
+  filter(str_length(token) > 0) %>%
+  group_by(token) %>%
+  count(sort = T)
+
+## combine restaurants to the original dataset
+data1_1 = data1 %>%
+  mutate(categories = str_to_lower(categories))
+newdata1 = inner_join(data1_1, df1_2)
+```
+
+```{r}
+## filter business which has "restaurants" and "food" in the categories ##
+df = data %>%
+  select(1:12) %>%
+  filter(str_detect(categories, "restaurants"))
+
+data_check = data %>%
+  select(1:12)
+df_check = anti_join(data_check, df)
+
+df_food = df_check %>%
+  filter(str_detect(categories, "food"))
+df_new = rbind(df, df_food)  
+
+df_check1 = anti_join(data_check, df_new)
+
+words_left = df_check1 %>%
+  select(categories) %>%
+  separate(categories, into = paste0("v", 1:100)) %>%
+  pivot_longer(cols = v1:v100,
+               names_to = "pos",
+               values_to = "token",
+               values_drop_na = TRUE) %>% 
+  filter(str_length(token) > 0) %>%
+  group_by(token) %>%
+  count(sort = T)
+
+## Only RESTAURANT Now ##
+restaurants = inner_join(data, df_new)
+
+## delet the coloumn that have more than 50% NAs.
+restaurants = restaurants[colSums(!is.na(restaurants)) > 0.5*nrow(restaurants)]
+
+## only open restaurants ##
+open = restaurants %>%
+  filter(is_open == 1)
+
+## write out the clean dataset
+write_csv(restaurants, "res.csv")
+```
+
+#################### working on restaurant ##################
+```{r warning=FALSE}
+res <- read.csv("restaurants.csv")
+res_in_state = res %>%
+  mutate(x = 1) %>%
+  select(x, name, state, stars, review_count, is_open, 
+         attributes.RestaurantsPriceRange2) %>%
+  na.omit(.) %>%
+  group_by(state) %>%
+  summarise(num = sum(x)) %>%
+  filter(num > 50)
+
+is.data.frame(res_in_state)
+
+stars_by_state = res %>%
+  select(name, state, stars, review_count, is_open, 
+         attributes.RestaurantsPriceRange2) %>%
+  na.omit(.) %>%
+  group_by(state) %>%
+  summarise(stars = mean(stars))
+
+## Visualization
+ggplot(res, aes(x=is_open)) +
+  geom_histogram(stat="count",fill="#FF6677") +
+  labs(title="Open vs Closed Restuarants",x="Open?")+
+  xlim(c("No","Yes")) +
+  ylim(0, 58000) +
+  theme_economist() +
+  scale_color_economist() +
+  theme(axis.text.x = element_text(hjust = 15.5))
+
+ggplot(res, aes(x=stars)) +
+  geom_histogram(stat="count",position="dodge2",aes(fill=factor(is_open))) +
+  labs(title="The Distribution of Star Ratings",x="star ratings",fill="Open?") +
+  scale_fill_discrete(labels=c("No","Yes")) +
+  theme_economist() + 
+  scale_color_economist()
+
+restaurant1=res %>% select(state,stars)
+restaurant1 =restaurant1[complete.cases(restaurant1),]
+restaurant2 = res[complete.cases(res),]
+names(res)
+ggplot(res, aes(attributes.GoodForKids))+
+  geom_histogram(stat="count",fill="red")+
+  facet_grid(is_open~.)
+ggplot(res,aes(attributes.RestaurantsPriceRange2,fill=factor(attributes.RestaurantsReservations),stat="identity"))+
+  geom_bar()+
+  labs(title = "Restaurants Reservations by price range",
+       x="Resaurant price range", 
+       fill="Resaurant Reservations")
+ggplot(restaurant1)+
+  geom_bar(aes(x=state,fill=factor(stars)),position="dodge")+
+  labs(title="Distribution of Star Restaurants in the State",
+       y="The number of each stars")
+ggplot(restaurant1,aes(x=state,y=stars))+
+  stat_summary(fun.y = "mean",geom="bar")+
+  labs(title="Average star rating by state",
+       y="Avergae star rating")
+ggplot(res)+
+  geom_bar(aes(x=attributes.RestaurantsPriceRange2,fill=factor(stars)),position="dodge")+
+  labs(title="Price Range for Star Restaurants",
+       x="Resaurant Price Range",
+       y="The number of each stars")
+```
+
+
