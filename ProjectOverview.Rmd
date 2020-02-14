@@ -1,7 +1,7 @@
 ---
-title: "BA888-Feb 13"
-author: "Team 6"
-date: "2/13/2020"
+title: "Project Overview - Can Yelp Reviews Save the Restaurant Industry?"
+author: "Xinman Liu, Melissa Putur, Jiao Sun, Adil Bin Wahab, Rui Xu"
+date: "2/14/2020"
 output: pdf_document
 ---
 
@@ -27,18 +27,29 @@ Yelp’s terabytes of historical data on restaurants’ reviews, check-ins, and 
 
 How can a restaurant leverage information on Yelp to increase their chances of attaining their business goals and preventing permanent closure? What aspects make customers choose a restaurant over its competitors? 
 
-### Data Source   
-We got our data from Kaggle, and there are 4 datasets in total, namely, business dataset, check-in, reviews, and users.
 
-### Summary of data
+### Ways to Solve Our Problem
+**1. descriptive + diagnostic analytics**
+Study the most essential aspects of a restaurant based on cuisine and price level to understand what most customers value (e.g. Do customers at low-price restaurants value the same “things” as mid-price and high-price restaurants).
+**2. predictive analytics**
+Predict whether a restaurant will close in the near future based on specific variables.
+**3. prescriptive Analytics**
+Create a recommendation system that predicts users’ preferences based on their reviews. prescriptive Analytics
+
+
+### Data Source   
+We got our data from [Kaggle](https://www.kaggle.com/yelp-dataset/yelp-dataset), and there are 4 datasets in total, namely, business, check-in, reviews, and users. 
+**Business dataset** includes business types, attributes, location, review count, star ratings, and open hours.
+**User dataset** about reviews on each business: text, rating, review count, and reactions (useful, cool, funny).
+**Check-ins datasets** includes the exact timestamp a user checked into a business.
+**Review dataset** includes the review text of each business with user ids, usefulness count, and reactions (useful, cool, funny).
+
+
+### Data Cleaning
 **Business Dataset:** For the project we are only interested in exploring reviews, star ratings, and interactions with restaurants. The business dataset contains information for all business reviewed by yelp. To narrow down this dataset we manually reviewed the top 1,000 phrases that businesses were tagged with to identify phrases that would be a good fit for restaurant. We filtered the complete list to only include businesses that were tagged with the phrases “food” and/or “restaurant”. Using these phrases we were able to identify ~75,000 restaurants.
 **Review Dataset:** The review dataset contains reviews for all businesses on Yelp. We reduced the review dataset to only include reviews for restaurants (as identified by the above processing steps). After this reduction the dataset contained over 4 million reviews.
 **Check-In Dataset:** The check-in dataset was structured so that each business was represented as a row with a comma separated list of check-ins by date. To make the data easier to work with we rearranged it so that each check-in was represented as a row rather than a list.
 
--Yelp business dataset about business types, attributes, location,  review count, and stars 
--User dataset about reviews on each restaurant or service: text, rating and reactions (useful, cool, funny)
--Check-ins datasets is for business.
--Resuaurant dataset about resuaurant category, attributes, location, stars rating, review  count, and open hours.
 
 #################### sample ####################
 ```{r}
