@@ -7,3 +7,7 @@ Yelp’s terabytes of historical data on restaurants’ reviews, check-ins, and 
 How can a restaurant leverage information on Yelp to increase their chances of attaining their business goals and preventing permanent closure? What aspects make customers choose a restaurant over its competitors?
 
 ### Prerequisites
+
+### Data Cleaning
+
+This project focuses on 3 Canadian cities Calgary, Mississauga, and Toronto. In order to keep the datasets robust, it only includes restaurants with at least 10 reviews and "Yelpers" who have written 10 or more reviews.
