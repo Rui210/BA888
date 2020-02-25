@@ -3,7 +3,6 @@ checkin=read.csv("canada_chickin.csv")
 restaurant=read.csv("cananda_restaurant.csv")
 dim(checkin)
 dim(restaurant)
-view(restaurant)
 glimpse(checkin)
 glimpse(restaurant)
 
