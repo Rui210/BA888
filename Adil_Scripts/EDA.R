@@ -12,9 +12,11 @@ summary(reviews)
 review_length <- sapply(strsplit(reviews$text, " "), length)
 review_length <- as.data.frame(review_length)
 
-ggplot(review_length) + geom_histogram(aes(x=review_length)) +
-  labs(x="review length") +
-  theme_minimal() 
+ggplot(review_length) + geom_histogram(aes(x=review_length),bins=25,
+                                       fill="#D32323") +
+  labs(title="Distribution of Review Length",x="review length") +
+  theme_minimal()
+
 
 
 
