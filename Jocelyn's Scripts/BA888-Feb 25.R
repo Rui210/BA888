@@ -3,6 +3,7 @@ checkin=read.csv("canada_chickin.csv")
 restaurant=read.csv("cananda_restaurant.csv")
 dim(checkin)
 dim(restaurant)
+view(restaurant)
 glimpse(checkin)
 glimpse(restaurant)
 
@@ -36,6 +37,7 @@ ggplot(new_table, aes(x=stars)) +
 ### Distribution of star ratings
 ggplot(restaurant)+
   geom_bar(aes(x=city,fill=factor(stars)),position="dodge")+
-  labs(title="Distribution of star ratings in Different City")
+  labs(title="Distribution of star ratings in Different City",
+       fill=guide_legend(title="Stars"))
 ##Toronto has the largest number of hotels, and Toronto also has the largest number of 5, 4 
 ##and 3 stars resutaurants.
