@@ -1,10 +1,9 @@
 library(tidyverse)
 library(ggplot2)
 library(lubridate)
-restaurants <- read_csv("/Users/Adil/Documents/RStudio/BA888/Data/cananda_restaurant.csv")
-dim(restaurants)
-reviews <- read_csv("/Users/Adil/Documents/RStudio/BA888/Data/canada_reviews.csv")
-checkIns <- read_csv("/Users/Adil/Documents/RStudio/BA888/Data/canada_checkin.csv")
+restaurants <- read_csv("Data/cananda_restaurant.csv")
+reviews <- read_csv("Data/canada_reviews.csv")
+checkin <- read_csv("Data/canada_checkin.csv")
 
 dim(reviews)
 summary(reviews)
