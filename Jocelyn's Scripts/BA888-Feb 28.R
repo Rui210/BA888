@@ -1,6 +1,6 @@
 library(tidyverse)
-checkin=read.csv("canada_chickin.csv")
-restaurant=read.csv("cananda_restaurant.csv")
+checkin=read.csv("Data/canada_chickin.csv")
+restaurant=read.csv("Data/cananda_restaurant.csv")
 dim(checkin)
 dim(restaurant)
 view(restaurant)
