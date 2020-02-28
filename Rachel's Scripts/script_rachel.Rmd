@@ -7,7 +7,7 @@ output: pdf_document
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(lubridate)
-review = read_csv("canada_reviews.csv")
+review = read_csv("reviews.csv")
 ```
 
 ### Exploratory data analysis
@@ -26,7 +26,7 @@ summary(reviewer$cum)
 ```{r}
 reviewer %>%
   ggplot() +
-  geom_bar(aes(x = year, y = cum), stat = 'identity') +
+  geom_bar(aes(x = year, y = cum), stat = 'identity', fill = "#F15C4f") +
   geom_line(aes(x = year, y = n)) +
   scale_x_continuous(breaks = reviewer$year) +
   labs(title = "The growth of active users in Yelp",
@@ -50,7 +50,7 @@ summary(posts$cum)
 ```{r}
 posts %>%
   ggplot() +
-  geom_bar(aes(x = year, y = n), stat = 'identity') +
+  geom_bar(aes(x = year, y = n), stat = 'identity', fill = "#f8ada8") +
   geom_line(aes(x = year, y = cum)) +
   scale_x_continuous(breaks = reviewer$year) +
   scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
@@ -75,7 +75,7 @@ summary(postcount$review_count)
 postcount[postcount$review_count >= 1000, "review_count"] = 1000
 postcount %>%
   ggplot() +
-  geom_histogram(aes(x = review_count), bins = 25, color = 'white') +
+  geom_histogram(aes(x = review_count), bins = 25, color = 'white', fill = "#f8ada8") +
   labs(title = 'Review Distribution',
        x = 'review') +
   theme_minimal()
