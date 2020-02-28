@@ -18,6 +18,7 @@ library(ggplot2)
 library(dplyr)
 library(ggthemes)
 library(readr)
+library(tidyr)
 ```
 
 ### Business Problem   
@@ -46,104 +47,164 @@ We got our data from [Kaggle](https://www.kaggle.com/yelp-dataset/yelp-dataset),
 
 
 ### Data Cleaning
-**Business Dataset:** For the project we are only interested in exploring reviews, star ratings, and interactions with restaurants. The business dataset contains information for all business reviewed by yelp. To narrow down this dataset we manually reviewed the top 1,000 phrases that businesses were tagged with to identify phrases that would be a good fit for restaurant. We filtered the complete list to only include businesses that were tagged with the phrases “food” and/or “restaurant”. Using these phrases we were able to identify ~75,000 restaurants.
+**Business Dataset:** For the project we are only interested in exploring reviews, star ratings, and interactions with restaurants. The business dataset contains information for all business reviewed by yelp. To narrow down this dataset we manually reviewed the top 1,000 phrases that businesses were tagged with to identify phrases that would be a good fit for restaurant. We filtered the complete list to only include businesses that were tagged with the phrases “food” and/or “restaurant”. Using these phrases we were able to identify ~75,000 restaurants. 
 **Review Dataset:** The review dataset contains reviews for all businesses on Yelp. We reduced the review dataset to only include reviews for restaurants (as identified by the above processing steps). After this reduction the dataset contained over 4 million reviews.
 **Check-In Dataset:** The check-in dataset was structured so that each business was represented as a row with a comma separated list of check-ins by date. To make the data easier to work with we rearranged it so that each check-in was represented as a row rather than a list.
-**Final Data Cleaning Criteria:** To make a robust datset that minimizes long compute time while preserving data quality, the dataset was filtered to only include Canadian cities (Toronto, Mississauga and Calgary). Montréal was excluded as a majority of the reviews are in French. Restuarants with less than 10 reviews were dropped, and only the reviews of users who have written at least 10 reviews were included. This criteria was implemented to reduce bias of reviews and create a fair comparison between the restaurants.
+**Final Data Cleaning Criteria:** To balance having a robust datset that minimizes long compute time while preserving data quality, the dataset was filtered to only include Canadian cities (Toronto, Mississauga and Calgary). Montréal was excluded as a majority of the reviews are in French. Restuarants with less than 10 reviews were dropped, and only the reviews of users who have written at least 10 reviews were included. This criteria was implemented to reduce the frequency of biased reviews and create a fair comparison between the restaurants.
+
 **Post-cleaned Dataset Information**: 
 Table 1: Number of reviews of each resturant (7,777 rows) - 200 KB (CSV)
 Table 2: Restaurant general info and attributes (7,777 rows) - reduced to 4 MB (CSV) from 34 MB (JSON)
 Table 3: Restuarant check-ins (852,300 rows) - reduced to 38.5 MB (CSV) from 390 MB (JSON)
 Table 4: Restaurant reviews (371,610 rows) - reduced to 320 MB (CSV) from 4.98 GB (JSON)
 
-#################### sample ####################
+###Exploratory Data Analysis
+
+##Loading the datasets
+```{r message=FALSE, warning=FALSE}
+#restaurants <- read_csv("/Users/Adil/Documents/RStudio/cananda_restaurant.csv") #adil file path
+restaurants <- read_csv("../Classes/888/Canada CSVs/cananda_restaurant.csv") #missy file path
+#dim(restaurants)
+#reviews <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_reviews.csv") #adil file path
+reviews <- read_csv("../Classes/888/Canada CSVs/canada_reviews.csv") #missy file path
+#checkIns <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_checkin.csv")
+checkin <- read_csv("../Classes/888/Canada CSVs/canada_checkin.csv")
+```
+
+##Restaurants Exploratory Data Analysis 
+
+There are 1,422 restaurants in Calgary, 808 restaurants in Mississauga, Toronto has the most restaurants with 5,547.
 ```{r}
-yelp = stream_in(file("business.json"))
-yelp_flat = flatten(yelp)
-yelp_buss = as.data.frame(yelp_flat)
+# restaurants are in each city
+#restaurants %>% group_by(city) %>% count(city)
+restaurants %>% 
+  ggplot(aes(x=city))+
+  geom_bar(fill=c("#F15C4F", "#FCD6D3","#F8ADA8"))+
+  theme_classic()+
+  labs(title = "Restaurant Distribution by City",
+       y="Amount")
+```
 
-write_csv(yelp_buss, "yelpbusiness.csv")
-data = read_csv("yelpbusiness.csv")
+Approximately 6,000 restaurants in the dataset are open and approximately 2,000 restaurants have closed. 
+```{r}
+open <- restaurants %>% group_by(is_open) %>% count(is_open)
+open[open$is_open==0,1]="no"
+open[open$is_open==1,1]="yes"
+open
+open %>% 
+  ggplot(aes(is_open,n))+
+  geom_col(fill=c("#F15C4F", "#F8ADA8"))+
+  labs(title = "Current Restuarant Status",
+       x="is open?",
+       y="Amount")+
+  theme_classic()
+```
 
-data1 = data[1:500, ]
-df1 = data1 %>%
- select(1:12) %>%
- mutate(categories = str_to_lower(categories)) %>%
- filter(str_detect(categories, "restaurants"))
+The majority of the restaurants in the dataset are in the "2-Dollar-Sign" price range. 
+```{r message=FALSE, warning=FALSE}
+restaurants %>% 
+  ggplot(aes(attributes_RestaurantsPriceRange2))+
+  geom_histogram(binwidth=1,fill="#F15C4F",color="#4D4D4D")+
+  labs(title = "Distribution of Price Range",
+       x="Price Range")+
+  theme_classic()
+```
 
-df2 = data1 %>%
- select(1:12) %>%
- mutate(categories = str_to_lower(categories))
+##Reviews Exploratory Data Analysis
+The dataset contains ~ 372,000 reviews for the 7,777 restaurants. On average, each restaurant has 48 reviews. 
+```{r message=FALSE, warning=FALSE}
+print(paste0("number of reviews: ", nrow(reviews)))
+print(paste0("average # of reviews: ", round(nrow(reviews)/nrow(restaurants))))
+#summary(reviews)
+```
 
-df3 = anti_join(df2, df1)
-df1_1 = df3 %>%
-  filter(str_detect(categories,"food"))
-df1_2 = rbind(df1, df1_1)
+#shouldn't be run? same as other graph but with different bins?
+```{r}
+review_length <- sapply(strsplit(reviews$text, " "), length)
+review_length <- as.data.frame(review_length)
 
-## check the restaurant businesses
-df3_1 = anti_join(df2, df1_2)
-df4 = df3_1 %>%
-  separate(categories, into = paste0("v", 1:100))
-df4 = df4[colSums(!is.na(df4)) > 0] 
-words = df4 %>%
-  pivot_longer(cols = v1:v24,
-               names_to = "pos",
-               values_to = "token",
-               values_drop_na = TRUE) %>% 
-  filter(str_length(token) > 0) %>%
-  group_by(token) %>%
-  count(sort = T)
+# Dist count
+ggplot(review_length) + geom_histogram(aes(x=review_length),bins=25,
+                                       fill="#D32323") +
+  labs(title="Distribution of Review Length",x="review length") +
+  theme_minimal()
+```
 
-## combine restaurants to the original dataset
-data1_1 = data1 %>%
-  mutate(categories = str_to_lower(categories))
-newdata1 = inner_join(data1_1, df1_2)
+The distribution of the review length is right-skewed with a mode of around 30 to 60 words, which represents the word count of over 20% of all reviews. More than 50% of all the reviews are between 30 to 120 words. The average review length is around 130 words while the median is around 100 words. 
+```{r}
+# Dist freq 
+ggplot(data=review_length, aes(x=review_length)) +
+geom_histogram(aes(y = stat(count) / sum(count)),
+               bins = 30, fill="#D32323") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title="Distribution of Review Length",
+       x="Review Length",y="Relative Frequency") +
+  theme_minimal() + scale_x_continuous(breaks=seq(0,1000,60))
 ```
 
 ```{r}
-## filter business which has "restaurants" and "food" in the categories ##
-df = data %>%
-  select(1:12) %>%
-  filter(str_detect(categories, "restaurants"))
-
-data_check = data %>%
-  select(1:12)
-df_check = anti_join(data_check, df)
-
-df_food = df_check %>%
-  filter(str_detect(categories, "food"))
-df_new = rbind(df, df_food)  
-
-df_check1 = anti_join(data_check, df_new)
-
-words_left = df_check1 %>%
-  select(categories) %>%
-  separate(categories, into = paste0("v", 1:100)) %>%
-  pivot_longer(cols = v1:v100,
-               names_to = "pos",
-               values_to = "token",
-               values_drop_na = TRUE) %>% 
-  filter(str_length(token) > 0) %>%
-  group_by(token) %>%
-  count(sort = T)
-
-## Only RESTAURANT Now ##
-restaurants = inner_join(data, df_new)
-
-## delet the coloumn that have more than 50% NAs.
-restaurants = restaurants[colSums(!is.na(restaurants)) > 0.5*nrow(restaurants)]
-
-## only open restaurants ##
-open = restaurants %>%
-  filter(is_open == 1)
-
-## write out the clean dataset
-write_csv(restaurants, "res.csv")
+print(paste0("mean ", (round(mean(review_length$review_length)))))
+print(paste0("median ", (median(review_length$review_length))))
 ```
 
-#################### working on restaurant ##################
-```{r warning=FALSE}
-res <- read.csv("restaurants.csv")
+## Check-Ins Exploratory Data Analysis:
+
+
+```{r}
+checkin$business_id=as.character(checkin$business_id)
+restauranu_count=checkin %>% group_by(business_id) %>% count(.)
+
+ggplot(checkin, aes(x=business_id)) +
+  geom_histogram(stat="count",fill="#D32323") +
+  labs(title="Distribution of check-in count")+
+  theme_classic()
+```
+
+```{r}
+### Checkins by Star Ratings
+restaurants$business_id=as.character(restaurants$business_id)
+new_table=left_join(x=checkin,y=restaurants)
+checkin_count=new_table %>% group_by(stars) %>% count(.)
+glimpse(new_table)
+ggplot(new_table, aes(x=stars)) +
+  geom_histogram(stat="count",fill="#D32323") +
+  labs(title="Checkins by Star Ratings")+
+  theme_classic()
+##4 stars have the largest numbers of checkins, followed by 3.5 and 3. While 5 and 1 stars
+##have the smallest number of checkins maybe because it is too expensive.
+```
+
+```{r}
+### Distribution of star ratings
+ggplot(restaurants)+
+  geom_bar(aes(x=city,fill=factor(stars)),position="dodge")+
+  labs(title="Distribution of star ratings in Different City")
+##Toronto has the largest number of hotels, and Toronto also has the largest number of 5, 4 
+##and 3 stars resutaurants.
+```
+
+##Check-In EDA
+```{r}
+checkinsforchart <- checkins %>% 
+  select(month_year) %>% 
+  group_by(month_year) %>% 
+  add_count() %>%
+  distinct()
+
+checkinsforchart %>% 
+  ggplot() +
+  geom_line(aes(x = month_year, y = n, group = 1), color = "#D32323", size = 2) + 
+  theme_minimal()+
+  theme(axis.text.x=element_text(angle=90, hjust=1)) +
+  labs(title = "Check-In by Day", x = "date", y="count")
+```
+
+
+
+
+```{r}
+#res <- read.csv("restaurants.csv") #original file path
+res <- read.csv("../Classes/888/Canada CSVs/cananda_restaurant.csv") #missy file path 
 res_in_state = res %>%
   mutate(x = 1) %>%
   select(x, name, state, stars, review_count, is_open, 
@@ -204,6 +265,97 @@ ggplot(res)+
   labs(title="Price Range for Star Restaurants",
        x="Resaurant Price Range",
        y="The number of each stars")
+
 ```
+
+```{r}
+yelp = stream_in(file("business.json"))
+yelp_flat = flatten(yelp)
+yelp_buss = as.data.frame(yelp_flat)
+
+write_csv(yelp_buss, "yelpbusiness.csv")
+data = read_csv("yelpbusiness.csv")
+
+data1 = data[1:500, ]
+df1 = data1 %>%
+ select(1:12) %>%
+ mutate(categories = str_to_lower(categories)) %>%
+ filter(str_detect(categories, "restaurants"))
+
+df2 = data1 %>%
+ select(1:12) %>%
+ mutate(categories = str_to_lower(categories))
+
+df3 = anti_join(df2, df1)
+df1_1 = df3 %>%
+  filter(str_detect(categories,"food"))
+df1_2 = rbind(df1, df1_1)
+
+## check the restaurant businesses
+df3_1 = anti_join(df2, df1_2)
+df4 = df3_1 %>%
+  separate(categories, into = paste0("v", 1:100))
+df4 = df4[colSums(!is.na(df4)) > 0] 
+words = df4 %>%
+  pivot_longer(cols = v1:v24,
+               names_to = "pos",
+               values_to = "token",
+               values_drop_na = TRUE) %>% 
+  filter(str_length(token) > 0) %>%
+  group_by(token) %>%
+  count(sort = T)
+
+## combine restaurants to the original dataset
+data1_1 = data1 %>%
+  mutate(categories = str_to_lower(categories))
+newdata1 = inner_join(data1_1, df1_2)
+
+```
+
+
+```{r}
+## filter business which has "restaurants" and "food" in the categories ##
+df = data %>%
+  select(1:12) %>%
+  filter(str_detect(categories, "restaurants"))
+
+data_check = data %>%
+  select(1:12)
+df_check = anti_join(data_check, df)
+
+df_food = df_check %>%
+  filter(str_detect(categories, "food"))
+df_new = rbind(df, df_food)  
+
+df_check1 = anti_join(data_check, df_new)
+
+words_left = df_check1 %>%
+  select(categories) %>%
+  separate(categories, into = paste0("v", 1:100)) %>%
+  pivot_longer(cols = v1:v100,
+               names_to = "pos",
+               values_to = "token",
+               values_drop_na = TRUE) %>% 
+  filter(str_length(token) > 0) %>%
+  group_by(token) %>%
+  count(sort = T)
+
+## Only RESTAURANT Now ##
+restaurants = inner_join(data, df_new)
+
+## delet the coloumn that have more than 50% NAs.
+restaurants = restaurants[colSums(!is.na(restaurants)) > 0.5*nrow(restaurants)]
+
+## only open restaurants ##
+open = restaurants %>%
+  filter(is_open == 1)
+
+## write out the clean dataset
+write_csv(restaurants, "res.csv")
+```
+
+
+
+
 
 

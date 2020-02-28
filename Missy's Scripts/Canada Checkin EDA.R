@@ -22,7 +22,8 @@ checkinsforchart <- checkins %>%
 
 checkinsforchart %>% 
   ggplot() +
-  geom_line(aes(x = month_year, y = n, group = 1)) + 
+  geom_line(aes(x = month_year, y = n, group = 1), color = "#D32323", size = 2) + 
   theme_minimal()+
-  theme(axis.text.x=element_text(angle=90, hjust=1))
+  theme(axis.text.x=element_text(angle=90, hjust=1)) +
+  labs(title = "Check-In by Day", x = "date", y="count")
   
