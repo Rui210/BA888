@@ -9,7 +9,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r include=FALSE}
+```{r message=FALSE, warning=FALSE, include=FALSE}
 library(tidyverse)
 library(jsonlite)
 library(tidytext)
@@ -20,6 +20,18 @@ library(ggthemes)
 library(readr)
 library(tidyr)
 ```
+
+```{r message=FALSE, warning=FALSE}
+#Loading the datasets
+#restaurants <- read_csv("/Users/Adil/Documents/RStudio/cananda_restaurant.csv") #adil file path
+restaurants <- read_csv("../Classes/888/Canada CSVs/cananda_restaurant.csv") #missy file path
+#dim(restaurants)
+#reviews <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_reviews.csv") #adil file path
+reviews <- read_csv("../Classes/888/Canada CSVs/canada_reviews.csv") #missy file path
+#checkIns <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_checkin.csv")
+checkin <- read_csv("../Classes/888/Canada CSVs/canada_checkin.csv")
+```
+
 
 ### Business Problem   
 Finding restaurants through directory services apps and review forum apps have become a crucial part of business discovery. It has changed the way restaurants of different tiers attain brand loyalty and market themselves.   
@@ -53,23 +65,12 @@ We got our data from [Kaggle](https://www.kaggle.com/yelp-dataset/yelp-dataset),
 **Final Data Cleaning Criteria:** To balance having a robust datset that minimizes long compute time while preserving data quality, the dataset was filtered to only include Canadian cities (Toronto, Mississauga and Calgary). Montréal was excluded as a majority of the reviews are in French. Restuarants with less than 10 reviews were dropped, and only the reviews of users who have written at least 10 reviews were included. This criteria was implemented to reduce the frequency of biased reviews and create a fair comparison between the restaurants.
 
 **Post-cleaned Dataset Information**: 
-Table 1: Number of reviews of each resturant (7,777 rows) - 200 KB (CSV)
-Table 2: Restaurant general info and attributes (7,777 rows) - reduced to 4 MB (CSV) from 34 MB (JSON)
-Table 3: Restuarant check-ins (852,300 rows) - reduced to 38.5 MB (CSV) from 390 MB (JSON)
+Table 1: Number of reviews of each resturant (`nrow(reviews)` rows) - 200 KB (CSV)
+Table 2: Restaurant general info and attributes (`nrow(restaurants)` rows) - reduced to 4 MB (CSV) from 34 MB (JSON)
+Table 3: Restuarant check-ins (`nrow(checkin)` rows) - reduced to 38.5 MB (CSV) from 390 MB (JSON)
 Table 4: Restaurant reviews (371,610 rows) - reduced to 320 MB (CSV) from 4.98 GB (JSON)
 
 ###Exploratory Data Analysis
-
-##Loading the datasets
-```{r message=FALSE, warning=FALSE}
-#restaurants <- read_csv("/Users/Adil/Documents/RStudio/cananda_restaurant.csv") #adil file path
-restaurants <- read_csv("../Classes/888/Canada CSVs/cananda_restaurant.csv") #missy file path
-#dim(restaurants)
-#reviews <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_reviews.csv") #adil file path
-reviews <- read_csv("../Classes/888/Canada CSVs/canada_reviews.csv") #missy file path
-#checkIns <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_checkin.csv")
-checkin <- read_csv("../Classes/888/Canada CSVs/canada_checkin.csv")
-```
 
 ##Restaurants Exploratory Data Analysis 
 
