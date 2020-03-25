@@ -34,6 +34,8 @@ restaurants_lm %>%
          attributes_NoiseLevel=as.numeric(attributes_NoiseLevel),
          attributes_full_bar=ifelse(attributes_Alcohol=="full_bar",1,0),
          attributes_beer_and_wine=ifelse(attributes_Alcohol=="beer_and_wine",1,0)) %>%
+  # Replace NAs with column median
+  mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .)) %>% 
   select(is_open, attributes_GoodForKids, attributes_RestaurantsReservations,
          attributes_RestaurantsTakeOut, attributes_OutdoorSeating,
          attributes_HasTV, attributes_RestaurantsGoodForGroups,
@@ -41,11 +43,8 @@ restaurants_lm %>%
          attributes_BikeParking, attributes_full_bar,
          attributes_beer_and_wine) -> lm_df
 
-# Replace NAs with column mean
-lm_df[] <- lapply(lm_df, na.aggregate)
-
 # Train/Test Split 
-set.seed(123)
+set.seed(999)
 sample.size <- floor(0.75 * nrow(lm_df))
 train.index <- sample(seq_len(nrow(lm_df)), size = sample.size)
 train_lm <- lm_df[train.index, ]
@@ -55,14 +54,21 @@ test_lm <- lm_df[- train.index, ]
 lm.fit = lm(is_open ~ ., data = train_lm)
 
 # LM Diagnostics
-summary(lm.fit)
+lmSum <- summary(lm.fit)
 
 # Prediction
 is_openPredict <- predict(lm.fit, test_lm)
 
 actuals_preds <- data.frame(cbind(actuals=test_lm$is_open, predicteds=is_openPredict))
 (correlation_accuracy <- cor(actuals_preds))
-head(actuals_preds)
+head(actuals_preds,15)
 
+# Calculate MSE
+x <- test_lm[,-1]
+p <- predict(lm.fit, data.frame(x))
 
+sum((test_lm$is_open - predict(lm.fit,data.frame(x)))^2)
+(mse_test_value <- mean((test_lm$is_open - predict(lm.fit,data.frame(x)))^2))
 
+# Another MSE calculation
+mean(lmSum$residuals^2)
