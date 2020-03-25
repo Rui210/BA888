@@ -1,4 +1,5 @@
 library(tidyverse)
+library(zoo)
 
 restaurants_lm <- read_csv("Data/canada_restaurants_ms.csv")
 
@@ -40,17 +41,28 @@ restaurants_lm %>%
          attributes_BikeParking, attributes_full_bar,
          attributes_beer_and_wine) -> lm_df
 
-# Linear Regression Model 
-lm_model <- lm(is_open ~ ., data = lm_df) 
-print(lm_model)
+# Replace NAs with column mean
+lm_df[] <- lapply(lm_df, na.aggregate)
+
+# Train/Test Split 
+set.seed(123)
+sample.size <- floor(0.75 * nrow(lm_df))
+train.index <- sample(seq_len(nrow(lm_df)), size = sample.size)
+train_lm <- lm_df[train.index, ]
+test_lm <- lm_df[- train.index, ]
+
+# Fit Linear Regression Model 
+lm.fit = lm(is_open ~ ., data = train_lm)
 
 # LM Diagnostics
-summary(lm_model)
-
-# Drop is_open
-test_lm_df = lm_df[,-1]
+summary(lm.fit)
 
 # Prediction
-head(predict(lm_model,test_lm_df, interval = "prediction"), 10)
+is_openPredict <- predict(lm.fit, test_lm)
+
+actuals_preds <- data.frame(cbind(actuals=test_lm$is_open, predicteds=is_openPredict))
+(correlation_accuracy <- cor(actuals_preds))
+head(actuals_preds)
+
 
 
