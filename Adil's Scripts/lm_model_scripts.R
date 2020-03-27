@@ -50,11 +50,11 @@ train.index <- sample(seq_len(nrow(lm_df)), size = sample.size)
 train_lm <- lm_df[train.index, ]
 test_lm <- lm_df[- train.index, ]
 
+y_train <- train_lm$is_open
+y_test <- test_lm$is_open
+
 # Fit Linear Regression Model 
 lm.fit = lm(is_open ~ ., data = train_lm)
-
-# LM Diagnostics
-lmSum <- summary(lm.fit)
 
 # Prediction
 is_openPredict <- predict(lm.fit, test_lm)
@@ -63,12 +63,28 @@ actuals_preds <- data.frame(cbind(actuals=test_lm$is_open, predicteds=is_openPre
 (correlation_accuracy <- cor(actuals_preds))
 head(actuals_preds,15)
 
-# Calculate MSE
-x <- test_lm[,-1]
-p <- predict(lm.fit, data.frame(x))
+# Calculate Train MSE
+y_hat_train <- predict(lm.fit, train_lm)
+mse_train_lm <- mean((y_hat_train - y_train)^2)
+mse_train_lm
 
-sum((test_lm$is_open - predict(lm.fit,data.frame(x)))^2)
-(mse_test_value <- mean((test_lm$is_open - predict(lm.fit,data.frame(x)))^2))
+# Calculate Test MSE
+y_hat_test <- predict(lm.fit, test_lm)
+mse_test_lm <- mean((y_hat_test - y_test)^2)
+mse_test_lm
 
-# Another MSE calculation
-mean(lmSum$residuals^2)
+# Linear Model Diagnostics 
+options(scipen = 999)
+round(coef(lm.fit),3)
+
+lmSum <- summary(lm.fit)
+lmSum
+
+# Positive significant variables:
+#### attributes_GoodForKids, attributes_NoiseLevel
+
+# Negative significant variables:
+#### attributes_full_bar, attributes_BikeParking, attributes_beer_and_wine
+
+
+
