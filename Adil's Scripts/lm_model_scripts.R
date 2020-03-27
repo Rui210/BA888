@@ -79,7 +79,7 @@ restaurants_lm %>%
   mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .)) %>% 
   select(is_open, attributes_GoodForKids, attributes_RestaurantsReservations,
          attributes_RestaurantsPriceRange2, attributes_RestaurantsTakeOut, 
-         attributes_OutdoorSeating, attributes_HasTV,
+         attributes_OutdoorSeating, attributes_HasTV, stars,
          attributes_RestaurantsGoodForGroups, attributes_WiFi,
          attributes_RestaurantsAttire, attributes_RestaurantsDelivery,
          attributes_NoiseLevel, attributes_BikeParking, 
@@ -123,7 +123,7 @@ mse_train_lm
 options(scipen = 999)
 round(coef(lm.fit),3)
 
-lmSum <- summary(lm.fit)
+lmSum <- summary(lm.fit) 
 lmSum
 
 # Positive significant variables:
@@ -132,5 +132,5 @@ lmSum
 # Negative significant variables:
 #### full_bar, BikeParking
 
-
-
+### USE KNN 
+### FIX AMBIANCE and BUSINESSPARKING
