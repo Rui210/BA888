@@ -22,10 +22,8 @@ lmSum <- summary(lm.fit)
 #lmSum
 stargazer::stargazer(lm.fit, type="text")
 
-# Positive significant variables:
-#### 
+# Positive significant variables (5% - 1%):
+#### stars - review_count - WiFi - park_lot
 
-# Negative significant variables:
-#### 
-
-### USE KNN
+# Negative significant variables (5% - 1%):
+#### full_bar - beer_wine - BikeParking - park_street
