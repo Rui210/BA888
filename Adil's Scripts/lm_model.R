@@ -17,10 +17,10 @@ mse_test_lm
 
 # Linear Model Diagnostics 
 options(scipen = 999)
-round(coef(lm.fit),3)
 
 lmSum <- summary(lm.fit) 
-lmSum
+#lmSum
+stargazer::stargazer(lm.fit, type="text")
 
 # Positive significant variables:
 #### 
@@ -28,4 +28,4 @@ lmSum
 # Negative significant variables:
 #### 
 
-### USE KNN 
+### USE KNN
