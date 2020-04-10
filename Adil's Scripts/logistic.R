@@ -1,69 +1,72 @@
 ############################LOGISTIC REGRESSION MODEL#################################
 library(smbinning) # converts a continuous vars into a categoricals w/ recursive partitioning
+library(InformationValue)
 
 inputData <- ml_df
 
 # Convert categorical vars
-inputData$attributes_RestaurantsReservations = ifelse(
-  inputData$attributes_RestaurantsReservations==1, "True", "False")
-inputData$attributes_RestaurantsTakeOut = ifelse(
-  inputData$attributes_RestaurantsTakeOut==1, "True", "False")
-inputData$attributes_RestaurantsDelivery = ifelse(
-  inputData$attributes_RestaurantsDelivery==1, "True", "False")
-inputData$attributes_HasTV = ifelse(
-  inputData$attributes_HasTV==1, "True", "False")
-
-inputData$amb_casual = ifelse(
-  inputData$amb_casual==1, "True", "False")
-inputData$amb_trendy = ifelse(
-  inputData$amb_trendy==1, "True", "False")
-inputData$amb_hipster = ifelse(
-  inputData$amb_hipster==1, "True", "False")
-inputData$amb_touristy = ifelse(
-  inputData$amb_touristy==1, "True", "False")
-inputData$amb_divey = ifelse(
-  inputData$amb_divey==1, "True", "False")
-inputData$amb_romantic = ifelse(
-  inputData$amb_romantic==1, "True", "False")
-inputData$amb_intimate = ifelse(
-  inputData$amb_intimate==1, "True", "False")
-inputData$amb_classy = ifelse(
-  inputData$amb_classy==1, "True", "False")
-inputData$amb_upscale = ifelse(
-  inputData$amb_upscale==1, "True", "False")
-inputData$full_bar = ifelse(
-  inputData$full_bar==1, "True", "False")
-inputData$beer_wine = ifelse(
-  inputData$beer_wine==1, "True", "False")
-inputData$attributes_GoodForKids = ifelse(
-  inputData$attributes_GoodForKids==1, "True", "False")
-inputData$attributes_RestaurantsGoodForGroups = ifelse(
-  inputData$attributes_RestaurantsGoodForGroups==1, "True", "False")
-inputData$attributes_BikeParking = ifelse(
-  inputData$attributes_BikeParking==1, "True", "False")
-inputData$attributes_OutdoorSeating = ifelse(
-  inputData$attributes_OutdoorSeating==1, "True", "False")
-inputData$park_street = ifelse(
-  inputData$park_street==1, "True", "False")
-inputData$park_validated = ifelse(
-  inputData$park_validated==1, "True", "False")
-inputData$park_lot = ifelse(
-  inputData$park_lot==1, "True", "False")
-inputData$park_garage = ifelse(
-  inputData$park_garage==1, "True", "False")
-inputData$park_valet = ifelse(
-  inputData$park_valet==1, "True", "False")
-
-inputData$attributes_WiFi[inputData$attributes_WiFi==0] <- "none"
-inputData$attributes_WiFi[inputData$attributes_WiFi==1] <- "paid"
-inputData$attributes_WiFi[inputData$attributes_WiFi==2] <- "free"
-
-inputData$attributes_RestaurantsAttire[inputData$attributes_RestaurantsAttire==0] <- "none"
-inputData$attributes_RestaurantsAttire[inputData$attributes_RestaurantsAttire==1] <- "casual"
-inputData$attributes_RestaurantsAttire[inputData$attributes_RestaurantsAttire==2] <- "dressy"
-inputData$attributes_RestaurantsAttire[inputData$attributes_RestaurantsAttire==3] <- "formal"
+# inputData$attributes_RestaurantsReservations = ifelse(
+#   inputData$attributes_RestaurantsReservations==1, "True", "False")
+# inputData$attributes_RestaurantsTakeOut = ifelse(
+#   inputData$attributes_RestaurantsTakeOut==1, "True", "False")
+# inputData$attributes_RestaurantsDelivery = ifelse(
+#   inputData$attributes_RestaurantsDelivery==1, "True", "False")
+# inputData$attributes_HasTV = ifelse(
+#   inputData$attributes_HasTV==1, "True", "False")
+# 
+# inputData$amb_casual = ifelse(
+#   inputData$amb_casual==1, "True", "False")
+# inputData$amb_trendy = ifelse(
+#   inputData$amb_trendy==1, "True", "False")
+# inputData$amb_hipster = ifelse(
+#   inputData$amb_hipster==1, "True", "False")
+# inputData$amb_touristy = ifelse(
+#   inputData$amb_touristy==1, "True", "False")
+# inputData$amb_divey = ifelse(
+#   inputData$amb_divey==1, "True", "False")
+# inputData$amb_romantic = ifelse(
+#   inputData$amb_romantic==1, "True", "False")
+# inputData$amb_intimate = ifelse(
+#   inputData$amb_intimate==1, "True", "False")
+# inputData$amb_classy = ifelse(
+#   inputData$amb_classy==1, "True", "False")
+# inputData$amb_upscale = ifelse(
+#   inputData$amb_upscale==1, "True", "False")
+# inputData$full_bar = ifelse(
+#   inputData$full_bar==1, "True", "False")
+# inputData$beer_wine = ifelse(
+#   inputData$beer_wine==1, "True", "False")
+# inputData$attributes_GoodForKids = ifelse(
+#   inputData$attributes_GoodForKids==1, "True", "False")
+# inputData$attributes_RestaurantsGoodForGroups = ifelse(
+#   inputData$attributes_RestaurantsGoodForGroups==1, "True", "False")
+# inputData$attributes_BikeParking = ifelse(
+#   inputData$attributes_BikeParking==1, "True", "False")
+# inputData$attributes_OutdoorSeating = ifelse(
+#   inputData$attributes_OutdoorSeating==1, "True", "False")
+# inputData$park_street = ifelse(
+#   inputData$park_street==1, "True", "False")
+# inputData$park_validated = ifelse(
+#   inputData$park_validated==1, "True", "False")
+# inputData$park_lot = ifelse(
+#   inputData$park_lot==1, "True", "False")
+# inputData$park_garage = ifelse(
+#   inputData$park_garage==1, "True", "False")
+# inputData$park_valet = ifelse(
+#   inputData$park_valet==1, "True", "False")
+# 
+# inputData$attributes_WiFi[inputData$attributes_WiFi==0] <- "none"
+# inputData$attributes_WiFi[inputData$attributes_WiFi==1] <- "paid"
+# inputData$attributes_WiFi[inputData$attributes_WiFi==2] <- "free"
+# 
+# inputData$attributes_RestaurantsAttire[inputData$attributes_RestaurantsAttire==0] <- "none"
+# inputData$attributes_RestaurantsAttire[inputData$attributes_RestaurantsAttire==1] <- "casual"
+# inputData$attributes_RestaurantsAttire[inputData$attributes_RestaurantsAttire==2] <- "dressy"
+# inputData$attributes_RestaurantsAttire[inputData$attributes_RestaurantsAttire==3] <- "formal"
 
 table(inputData$is_open)
+
+# inputData[,5:30] = lapply(inputData[,5:30], factor)
 
 # Create Training Data (70%)
 input_ones <- inputData[which(inputData$is_open == 1), ]  # all 1's
@@ -107,7 +110,7 @@ for(factor_var in factor_vars){
 
 # compute IV for continuous vars
 for(continuous_var in continuous_vars){
-  smb <- smbinning(trainingData, y="ABOVE50K", x=continuous_var)  # WOE table
+  smb <- smbinning(trainingData, y="is_open", x=continuous_var)  # WOE table
   if(class(smb) != "character"){  # any error while calculating scores.
     iv_df[iv_df$VARS == continuous_var, "IV"] <- smb$iv
   }
@@ -115,3 +118,36 @@ for(continuous_var in continuous_vars){
 
 iv_df <- iv_df[order(-iv_df$IV), ]  # sort
 iv_df
+
+logitMod <- glm(is_open ~ ., data=trainingData, family=binomial(link="logit"))
+
+predicted <- predict(logitMod, testData, type="response")  # predicted scores
+
+summary(logitMod)
+
+optCutOff <- optimalCutoff(testData$is_open, predicted)[1] 
+
+# Misclassification error is the percentage mismatch of predcited vs actuals,
+# irrespective of 1’s or 0’s.
+# The lower the misclassification error, the better is your model.
+misClassError(testData$is_open, predicted, threshold = optCutOff)
+
+# for a good model, the curve should rise steeply, indicating that the TPR (Y-Axis) increases faster
+# than the FPR (X-Axis) as the cutoff score decreases.
+# Greater the area under the ROC curve, better the predictive ability of the model.
+plotROC(testData$is_open, predicted)
+
+# Concordance is the percentage of pairs, whose scores of actual positive’s are greater than the scores of actual negative’s.
+# The higher the concordance, the better is the quality of model.
+Concordance(testData$is_open, predicted)
+
+# true positive rate -- is opem
+sensitivity(testData$is_open, predicted, threshold = optCutOff)
+
+# true negative rate -- is closed
+specificity(testData$is_open, predicted, threshold = optCutOff)
+
+# The columns are actuals, while rows are predicteds.
+confusionMatrix(testData$is_open, predicted, threshold = optCutOff)
+
+
