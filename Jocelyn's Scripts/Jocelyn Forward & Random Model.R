@@ -212,9 +212,12 @@ best_fw_model <- as.formula("is_open ~ review_count + full_bar + park_lot + star
                               attributes_BikeParking + park_valet + amb_touristy + park_garage +
                               amb_hipster + amb_divey + amb_upscale + park_validated")
 best_fw_model <- lm(best_fw_model, data = data_train)
-coef(best_fw_model)### one problem here: the coefficient for amb_divery is NA
+coef(best_fw_model)### one problem here: the coefficient for amb_divery is NA ###
 
 # The final forward selection model contained 19 variables(please notice that the coefficient for amb_divery is NA). 
+# As expected, many of the variables describing the characteristics of the restaurants were included in the model. 
+# From the above results, it is clear that park_street, park_validated,park_lot, park_valet, attributes_BikeParking,amb_romantic, stars have higher correlations to whether the restaurant is open or not.
+# I would say that customers pay more attention to parking in restaurants. Therefore, the hotel's open and close have a strong relationship with parking.
 
 ############################Random Forecast############################
 lf <- "is_open ~ price_range"
@@ -228,13 +231,26 @@ y_train <- data_train$is_open
 x_test <- model.matrix(f,data_test)[ , -1]
 y_test <- data_test[ ,"is_open"]
 
+x_train_isOpen <- model.matrix(formula_isOpen, data_train)[, -1]
+x_test_isOpen <- model.matrix(formula_isOpen, data_test)[, -1]
+
+y_train_isOpen <- data_train$is_open
+y_test_isOpen <- data_test$is_open
+
+
 fit_rf <- randomForest(f,
                        data_train,
                        ntree=500,
                        do.trace=F)
 varImpPlot(fit_rf)
 yhat_train_rf <- predict(fit_rf,data_train)
-mse_rf_train <- mean((yhat_train_rf-y_train)^2)
+mse_rf_train <- mean((yhat_train_rf-y_train_isOpen)^2)
 mse_rf_train
+yhat_test_rf <- predict(fit_rf,data_test)
+mse_rf_test <-mean((yhat_test_rf-y_test_isOpen)^2)
+mse_rf_test
 
 # The final random forest model included 29 variables. 
+# Using the variable importance plot we can see that the variables related to the attributes of the restaurant are the most predictive. 
+# On the plot we can see “review_count”, “star”, “price_range”, “attributes_WiFi”, “attributes_Has TV”, “attributes_RestaurantsDelivey”, “attributes_OutdoorSeating”, and “park_street” are the most predictive with
+# IncNodepurity all higher than 30. We got MSE for test dataset is only 0.1712097.

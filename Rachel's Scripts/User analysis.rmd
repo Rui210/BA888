@@ -1,0 +1,231 @@
+---
+title: "Yelp Reviewer Analysis"
+author: "Rui Xu"
+date: "4/12/2020"
+output: pdf_document
+---
+*Business Problem*: Inspecting Yelp customer activity in great Canada area, Figure out what's the customer characteristics reflects on review and rating and how to build locally vibrant conmmunities of reviewers who contirbute to the content on yelp platform.
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+options(scipen=999)
+
+reviews = read_csv('canada_reviews_ms.csv')
+viewers = read_csv('canada_viewers_rui_edits.csv')
+```
+
+### Quick overview
+```{r}
+# Local User Growth 
+general_reviewers = reviews %>%
+  select(yelping_since, review_count, user_id)
+general_reviewers = general_reviewers[!duplicated(general_reviewers),]
+general_reviewers = general_reviewers %>%
+  mutate(year = year(yelping_since)) %>%
+  count(year) %>%
+  mutate(cum = cumsum(n)) %>%
+  filter(year>=2007)
+
+general_reviewers %>%
+  ggplot() +
+  geom_bar(aes(x = year, y = cum), stat = 'identity', fill = "#F15C4f") +
+  geom_line(aes(x = year, y = n)) +
+  scale_x_continuous(breaks = general_reviewers$year) +
+  labs(title = "The growth of customer accounts on Yelp",
+       subtitle = "and annual increase amount",
+       x = 'Years',
+       y = 'Number of reviewers') +
+  theme_minimal()
+```
+```{r}
+# Review contents growth 
+general_posts = reviews %>%
+  select(date, review_count, user_id) %>%
+  mutate(date = year(date)) %>%
+  rename(year = date) %>%
+  count(year) %>%
+  mutate(cum = cumsum(n))
+
+general_posts %>%
+  ggplot() +
+  geom_bar(aes(x = year, y = n), stat = 'identity', fill = "#f8ada8") +
+  geom_line(aes(x = year, y = cum)) +
+  scale_x_continuous(breaks = general_posts$year) +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "The number of review posted by years",
+       subtitle = "and accumulative reviews amount",
+       x = 'Years',
+       y = 'Number of reviews')+
+  theme_minimal()
+```
+**Find Out** The number of new customer kept increasing but the speed went to flat since 2015. At the same time, The review posted decreased in 2018.
+
+###Active user analysis
+**Who are active users?** Users whose total review in one particular year is more than yelp mean review posted in that year as active users.
+```{r}
+# average number of reviews each year
+mean_n = reviews %>% 
+  mutate(year = year(date)) %>%
+  group_by(year, user_id) %>%
+  count(year) %>%
+  group_by(year) %>%
+  summarise(mean = mean(n)) 
+
+# Label active y/n
+active = merge(tmp, mean_n, by = 'year')
+act_year = active %>% 
+  group_by(year) %>%
+  mutate(active = ifelse(n > mean, 1, 0)) %>%
+  mutate(active = factor(active)) 
+
+gf = act_year %>%
+  ungroup() %>%
+  group_by(year, mean, active) %>%
+  count(active)
+
+ggplot(gf,aes(x=year)) + 
+  geom_bar(aes(y=n, fill = active), stat = 'identity', alpha = 0.8) +
+  scale_fill_manual(values= c("#f8ada8", "#F15C4f")) +
+  scale_x_continuous(breaks = act_gf$year) + 
+  labs(y='Users',
+       title = 'Yelp active users gradually abate from 2007 to 2018') +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA)
+  ) + 
+  geom_line(aes(y = mean*4000)) + 
+  scale_y_continuous(sec.axis = sec_axis(~./4000, name = "Average num of review posted"))
+```
+```{r}
+pie2017 = gf %>%
+  filter(year == 2017)
+
+type = c('inactive user', 'active user')
+pct2017 = with(pie2017, round(n/sum(n)*100))
+type <- paste(type, pct2017) # add percents to labels
+type <- paste(type,"%",sep="") # ad % to labels
+
+pie(pct2017,labels = type, col=rainbow(length(type)),
+   main="Pie Chart of Active User in 2017")
+```
+```{r}
+pie2018 = gf %>%
+  filter(year == 2018)
+
+type = c('inactive user', 'active user')
+pct2018 = with(pie2018, round(n/sum(n)*100))
+type <- paste(type, pct2018) # add percents to labels
+type <- paste(type,"%",sep="") # ad % to labels
+
+pie(pct2018,labels = type, col=rainbow(length(type)),
+   main="Pie Chart of Active User in 2018")
+```
+**Find Out** From users who at least posted one review, 2018 active users are less than the active users in the past year.
+
+```{r}
+# 2018 reviewers
+active18 = act_year %>%
+  filter(year == 2018) %>%
+  ungroup() %>%
+  mutate(year_act = 2018) %>%
+  select(user_id, annual_reviews = n, active, year_act) 
+
+viewer18 = inner_join(viewers, active18, by='user_id')
+reviews18 = inner_join(viewer18, reviews, by = 'user_id')
+
+# 2017 reviewers
+active17 = act_year %>%
+  filter(year == 2017) %>%
+  ungroup() %>%
+  mutate(year_act = 2017) %>%
+  select(user_id, annual_reviews = n, active, year_act)
+viewer17 = inner_join(viewers, active17, by='user_id')
+reviews17 = inner_join(viewer17, reviews, by = 'user_id')
+
+# 2016 reviewers
+active16 = act_year %>%
+  filter(year == 2016) %>%
+  ungroup() %>%
+  mutate(year_act = 2016) %>%
+  select(user_id, annual_reviews = n, active, year_act)
+viewer16 = inner_join(viewers, active16, by='user_id')
+reviews16 = inner_join(viewer16, reviews, by = 'user_id')
+
+# 2015 reviewers
+active15 = act_year %>%
+  filter(year == 2015) %>%
+  ungroup() %>%
+  mutate(year_act = 2015) %>%
+  select(user_id, annual_reviews = n, active, year_act)
+viewer15 = inner_join(viewers, active15, by='user_id')
+reviews15 = inner_join(viewer15, reviews, by = 'user_id')
+
+## combine
+reviewers15_18 = rbind(reviews15, reviews16, reviews17, reviews18)
+
+viewers15_18 = reviewers15_18 %>%
+  mutate(year_post = year(date)) %>%
+  filter(year_post == year_act) %>%
+  select(user_id, avg_stars = average_stars.x, friends, useful, fans, 
+         yelp_since = yelping_since.x, 
+         total_reviews = review_count.x,
+         annual_reviews, active, year_act, text, date, stars, business_id)
+```
+```{r}
+## active ~ star rating
+tmp_stars = viewers15_18 %>%
+  select(user_id, stars, active, year_act) %>%
+  group_by(user_id, active, year_act) %>%
+  summarise(avg_annual_stars = round(mean(stars), 2)) %>%
+  ungroup() %>%
+  mutate(active = ifelse(active==1, 'yes', 'no')) 
+
+ggplot(tmp_stars, aes(avg_annual_stars, fill = active)) + 
+  scale_fill_manual(values= c("#626262", "#F15C4f")) +
+  geom_density(alpha = 0.2) +
+  facet_wrap(.~ year_act, ncol = 2) +
+  labs(x='Annual rating in average',
+       title = 'Active reviewers rating restuarant concentrated around 4 stars') +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA)
+  )
+
+```
+**Find Out** Active reviewers' average rating concentrated between 3 to 5, while inactive reviewers's average rating extremely distributed on 1 or 5.
+
+```{r}
+## active ~ word.length
+viewers15_18 = viewers15_18 %>%
+  mutate(words_length = sapply(strsplit(text, " "), length))
+```
+```{r}
+words_length = viewers15_18 %>%
+  select(user_id, words_length, active, year_act) %>%
+  group_by(year_act, active) %>%
+  summarise(avg.words = mean(words_length))
+
+```
+```{r}
+ggplot(words_length, aes(x=year_act, y=avg.words)) +
+  geom_line(aes(color=active)) +  
+  scale_color_manual(values= c("#f8ada8", "#F15C4f")) +
+  labs(x='Active reviewers',
+       y='Average number of words in reviews',
+       title = 'Active reviewers write more in review') +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA)
+  ) 
+```
+**Find Out** Active Reviewers willing to writing longer contents in review, sharing more information to audience, while inactive reviewers writing less and shorter reviews year by year. 
+**Takeaway** 
+- Active users prefer to write concrete contents to contribute and do recommendation rather than simply give a star rating. They are 'mild' on star rating to restaurants. 
+- Inactive users write less on yelp reviewing, they prefer rating star as restaurant review. And they rating more extrame, 'bad to worst and good to best'. 
