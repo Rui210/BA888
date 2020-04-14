@@ -1,7 +1,10 @@
 library(tidyverse)
 library(zoo)
+library(DescTools)
+library(lubridate)
 
 restaurants_lm <- read_csv("Data/canada_restaurants_ms.csv")
+checkIns <- read_csv("Data/canada_checkins_ms.csv")
 
 ############################DATA CLEANING#################################
 
@@ -33,7 +36,6 @@ unique(unlist(str_split(restaurants_lm$attributes_BusinessParking, ' ' )))
 restaurants_lm$amb_casual <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'casual': True"), 1, 0)
 restaurants_lm$amb_trendy <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'trendy': True"), 1, 0)
 restaurants_lm$amb_hipster <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'hipster': True"), 1, 0)
-restaurants_lm$amb_divey <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'divey': True"), 1, 0)
 restaurants_lm$amb_touristy <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'touristy': True"), 1, 0)
 restaurants_lm$amb_romantic <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'romantic': True"), 1, 0)
 restaurants_lm$amb_intimate <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'intimate': True"), 1, 0)
@@ -89,6 +91,23 @@ restaurants_lm$attributes_WiFi[restaurants_lm$attributes_WiFi=="'paid'"] <- 1
 restaurants_lm$attributes_WiFi[restaurants_lm$attributes_WiFi=="u'free'"] <- 2
 restaurants_lm$attributes_WiFi[restaurants_lm$attributes_WiFi=="'free'"] <- 2
 
+# Create month columns for checkins 
+checkIns %>% group_by(business_id) %>% 
+  mutate(j=ifelse(month(updatedcheckins)==1,1,0)) %>%
+  mutate(f=ifelse(month(updatedcheckins)==2,1,0)) %>%
+  mutate(mr=ifelse(month(updatedcheckins)==3,1,0)) %>%
+  mutate(ap=ifelse(month(updatedcheckins)==4,1,0)) %>%
+  mutate(m=ifelse(month(updatedcheckins)==5,1,0)) %>%
+  mutate(ju=ifelse(month(updatedcheckins)==6,1,0)) %>%
+  mutate(jl=ifelse(month(updatedcheckins)==7,1,0)) %>%
+  mutate(au=ifelse(month(updatedcheckins)==8,1,0)) %>%
+  mutate(s=ifelse(month(updatedcheckins)==9,1,0)) %>%
+  mutate(o=ifelse(month(updatedcheckins)==10,1,0)) %>%
+  mutate(n=ifelse(month(updatedcheckins)==11,1,0)) %>%
+  mutate(d=ifelse(month(updatedcheckins)==12,1,0)) %>%
+  summarize(jan=sum(j),feb=sum(f),mar=sum(mr),apr=sum(ap),may=sum(m),jun=sum(ju),
+            jul=sum(jl),aug=sum(au),sep=sum(s),oct=sum(o),nov=sum(n),dec=sum(d)) -> checkIn_months
+
 # Make new df w/ columns for ML application -- ml_df
 restaurants_lm %>% 
   mutate(attributes_GoodForKids=1*attributes_GoodForKids,
@@ -102,19 +121,23 @@ restaurants_lm %>%
          attributes_NoiseLevel=as.numeric(attributes_NoiseLevel),
          attributes_WiFi=as.numeric(attributes_WiFi),
          attributes_RestaurantsAttire=as.numeric(attributes_RestaurantsAttire),
-         price_range=attributes_RestaurantsPriceRange2 ) %>%
+         price_range=attributes_RestaurantsPriceRange2,
+         review_count=Winsorize(review_count, probs = c(0.05, 0.95))) %>%
   # Replace NAs with column median
   mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .)) %>% 
-  select(is_open, price_range, stars, review_count, 
+  select(business_id, is_open, price_range, stars, review_count,
          attributes_RestaurantsReservations, attributes_RestaurantsTakeOut,
          attributes_RestaurantsDelivery, attributes_HasTV, attributes_WiFi,
-         amb_casual, amb_trendy, amb_hipster, amb_touristy, amb_divey,
+         amb_casual, amb_trendy, amb_hipster, amb_touristy,
          amb_romantic, amb_intimate, amb_classy, amb_upscale,
          full_bar, beer_wine, attributes_RestaurantsAttire,
          attributes_GoodForKids, attributes_RestaurantsGoodForGroups,
          attributes_BikeParking, attributes_OutdoorSeating,
          park_street, park_validated, park_lot, park_garage, park_valet
          ) -> ml_df
+
+ml_df %>% left_join(checkIn_months,by='business_id') %>% 
+  select(-business_id) -> ml_df
 
 ############################SPLIT DATA FOR TRAIN/TEST############################
 

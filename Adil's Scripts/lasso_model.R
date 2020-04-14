@@ -1,26 +1,60 @@
 ############################LASSO REGRESSION MODEL#################################
 library(glmnet)
 
-# Fit model
-lasso.fit <- cv.glmnet(x_train_isOpen, data_train$is_open, alpha = 1, nfolds = 10)
+## Find the best lambda using cross-validation
+set.seed(007) 
+cv.lasso <- cv.glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial")
 
-# View coefficients
-coef(lasso.fit)
+# Fit the final model on the training data
+model <- glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial",
+                lambda = cv.lasso$lambda.min)
 
-# Calculate Train MSE
-yhat_train_lasso <- predict(lasso.fit, x_train_isOpen, s = lasso.fit$lambda.min)
-mse_train_lasso <- mean((data_train$is_open - yhat_train_lasso)^2)
+# Make predictions on the test data
+x.test <- model.matrix(is_open ~.,data_test)[,-1]
+probabilities <- model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
 
-# Calculate Test MSE
-yhat_test_lasso <- predict(lasso.fit, x_test_isOpen, s = lasso.fit$lambda.min)
-mse_test_lasso <- mean((data_test$is_open - yhat_test_lasso)^2)
+# Model accuracy
+observed.classes <- data_test[1:2258,]$is_open
+mean(predicted.classes == observed.classes) * 100
 
-# Compare MSEs
-mse_train_lasso
-mse_test_lasso
+set.seed(007)
+cv.lasso <- cv.glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial")
+plot(cv.lasso)
+
+############################ Final model with lambda.min ############################
+lasso.model <- glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial",
+                      lambda = cv.lasso$lambda.min)
+
+# Make prediction on test data
+x.test <- model.matrix(is_open ~., data_test)[,-1]
+probabilities <- lasso.model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+# Model accuracy based on min
+observed.classes <- data_test[1:2258,]$is_open
+mean(predicted.classes == observed.classes) * 100
+
+############################ Final model with lambda.1se ############################
+lasso.model <- glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial",
+                      lambda = cv.lasso$lambda.1se)
+
+# Make prediction on test data
+x.test <- model.matrix(is_open ~., data_test)[,-1]
+probabilities <- lasso.model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+# Model accuracy based on 1se
+observed.classes <- data_test[1:2258,]$is_open
+mean(predicted.classes == observed.classes) * 100
+
+####### lambda.1se model is the most accurate with 73% accuracy #######
+coef(cv.lasso, cv.lasso$lambda.1se)
 
 # Positive significant variables:
-#### stars - review_count - amb_casual - GoodForKids - park_lot
+#### stars - review_count - RestaurantsTakeOut - RestaurantsDelivery - GoodForKids -
+#### park_lot - sep
 
 # Negative significant variables:
-#### price_range - full_bar - BikeParking - park_street
+#### price_range - amb_trendy - amb_classy - full_bar - RestaurantAttire - OutdoorSeating -
+#### park_street - BikeParking
