@@ -229,3 +229,155 @@ ggplot(words_length, aes(x=year_act, y=avg.words)) +
 **Takeaway** 
 - Active users prefer to write concrete contents to contribute and do recommendation rather than simply give a star rating. They are 'mild' on star rating to restaurants. 
 - Inactive users write less on yelp reviewing, they prefer rating star as restaurant review. And they rating more extrame, 'bad to worst and good to best'. 
+
+### Sentiment Analysis
+```{r message=FALSE, warning=FALSE}
+library(factoextra)
+library(tidytext)
+library(sentimentr)
+```
+```{r message=FALSE}
+# sentiment analysis 2018
+review18 = viewers15_18 %>%
+  filter(year_act == 2018)
+review18$text = str_to_lower(review18$text)
+review18$text = gsub('http.*', "", review18$text)
+review18$text = gsub("https.*", "", review18$text)
+data('stop_words')
+text1 = review18 %>%
+  select(text) %>%
+  unnest_tokens(word, text, 
+                strip_punct = T) %>%
+  anti_join(stop_words)
+```
+```{r message=FALSE}
+sti_word1 = text1 %>%
+  select(word) %>%
+  inner_join(get_sentiments('bing')) %>%
+  count(word,sentiment, sort=TRUE) %>%
+  ungroup()
+
+sti_word1 %>%
+  group_by(sentiment) %>%
+  top_n(10) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = 'free_y')+
+  labs(title = 'Sentiment of Yelp review',
+       y = 'Contribution to sentiment',
+       x = NULL) +
+  coord_flip()
+```
+```{r message=FALSE}
+# 2017 sentiment analysis
+review17 = viewers15_18 %>%
+  filter(year_act == 2017)
+review17$text = str_to_lower(review17$text)
+review17$text = gsub('http.*', "", review17$text)
+review17$text = gsub("https.*", "", review17$text)
+data('stop_words')
+text2 = review17 %>%
+  select(text) %>%
+  unnest_tokens(word, text, 
+                strip_punct = T) %>%
+  anti_join(stop_words)
+```
+```{r message=FALSE}
+sti_word2 = text2 %>%
+  select(word) %>%
+  inner_join(get_sentiments('bing')) %>%
+  count(word,sentiment, sort=TRUE) %>%
+  ungroup()
+
+sti_word2 %>%
+  group_by(sentiment) %>%
+  top_n(10) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = 'free_y')+
+  labs(title = 'Sentiment of Yelp review',
+       y = 'Contribution to sentiment',
+       x = NULL) +
+  coord_flip()
+```
+
+# Association Rule 
+```{r message=FALSE, warning=FALSE}
+library(arules)
+library(arulesViz)
+#pre-process data, keep 2018 reviewers
+arule2018 = reviews %>%
+  mutate(year = year(date)) %>%
+  filter(year == 2018) %>%
+  select(user_id, business_id)
+#altern business id by restaurant names
+rest = read_csv('~/Desktop/Capstone/canada_restaurants_ms_edits.csv')
+arule2018 = rest%>%
+  select(business_id, name)%>%
+  inner_join(.,arule2018, by='business_id')
+```
+```{r}
+#denoted each rating as a transaction
+length(unique(arule2018$user_id));length(unique(arule2018$business_id))
+```
+```{r}
+## get the data into transaction format
+# write.csv(arule2018, 'arules18.csv')
+read.csv('arules18.csv')
+tr = read.transactions('arules18.csv',
+                       format = "single",
+                       header = TRUE,
+                       sep=",",
+                       cols = c("user_id", "name"),
+                       rm.duplicates = TRUE)
+class(tr)
+summary(tr) 
+```
+*Quick Look*: we have 27251 rating transactions, 5786 restaurants as items.
+
+```{r}
+# business frequency plotting
+itemf = itemFrequency(tr)
+head(sort(itemf,decreasing = TRUE),10)
+itemFrequencyPlot(tr, topN=10, horiz=TRUE)
+```
+```{r}
+## fit association model
+rules = apriori(tr, 
+                parameter = list(supp = .0001, # some business rarely reviewed
+                                 conf = .5, # make sure rules are 50% correct at least.
+                                 minlen = 1, # some users only review one business in 2018. 
+                                 target = "rules"))
+```
+```{r}
+## add rule quality measures
+## chisquare - test of independence between LHS and RHS, p < .05 is depdenence
+rule_chisq = interestMeasure(rules, 
+                             measure="chiSquared",
+                             transactions=tr,
+                             significance=TRUE)
+quality(rules) = cbind(quality(rules), rule_chisq)
+## summary
+summary(rules) 
+```
+*Quick Look*: 7870 rules are created. The minimum number of times a rule was seen in our data is 12. The average size of one rule is 3.3. The lift range is [23.05, 3406.38]
+
+```{r}
+## Rule pruning: filter more general rule with the same or higher confidence
+rr = rules[is.redundant(rules)]
+rules_pruned = rules[!is.redundant(rules)]
+length(rules_pruned) #6995 
+```
+```{r}
+## Inspect rules
+df_rules = data.frame(lhs = labels(lhs(rules_pruned)), rhs = labels(rhs(rules_pruned)), rules_pruned@quality)
+
+# pick the top 10 rules
+top_rules = df_rules%>%arrange(desc(count),desc(confidence), desc(support), desc(lift))%>%head(.,10)
+top_rules
+```
+**Find Out** Association rule shows Janpanese Ramen and Thai food are the two catering category with highest accuracy in recommendation. 
