@@ -122,7 +122,7 @@ restaurants_lm %>%
          attributes_WiFi=as.numeric(attributes_WiFi),
          attributes_RestaurantsAttire=as.numeric(attributes_RestaurantsAttire),
          price_range=attributes_RestaurantsPriceRange2,
-         review_count=Winsorize(ml_df$review_count, probs = c(0.05, 0.95))) %>%
+         review_count=Winsorize(review_count, probs = c(0.05, 0.95))) %>%
   # Replace NAs with column median
   mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .)) %>% 
   select(business_id, is_open, price_range, stars, review_count,
