@@ -11,8 +11,8 @@ library(tidyverse)
 library(lubridate)
 options(scipen=999)
 
-reviews = read_csv('canada_reviews_ms.csv')
-viewers = read_csv('canada_viewers_rui_edits.csv')
+reviews = read_csv('~/Desktop/Capstone/canada_reviews_ms.csv')
+viewers = read_csv('~/Desktop/Capstone/canada_viewers_rui_edits.csv')
 ```
 
 ### Quick overview
@@ -73,6 +73,10 @@ mean_n = reviews %>%
   summarise(mean = mean(n)) 
 
 # Label active y/n
+tmp = reviews %>%
+  mutate(year = year(date)) %>%
+  group_by(year, user_id) %>%
+  count(year)
 active = merge(tmp, mean_n, by = 'year')
 act_year = active %>% 
   group_by(year) %>%
@@ -87,7 +91,7 @@ gf = act_year %>%
 ggplot(gf,aes(x=year)) + 
   geom_bar(aes(y=n, fill = active), stat = 'identity', alpha = 0.8) +
   scale_fill_manual(values= c("#f8ada8", "#F15C4f")) +
-  scale_x_continuous(breaks = act_gf$year) + 
+  scale_x_continuous(breaks = gf$year) + 
   labs(y='Users',
        title = 'Yelp active users gradually abate from 2007 to 2018') +
   theme(
