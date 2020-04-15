@@ -1,19 +1,16 @@
 ############################LINEAR REGRESSION MODEL#################################
 
 # Fit Linear Regression Model 
-lm.fit = lm(is_open ~ ., data = train)
+lm.fit = lm(is_open ~ ., data = data_train)
 
-# Calculate Train MSE
-yhat_train_lm <- predict(lm.fit)
-mse_train_lm <- mean((y_train_isOpen - yhat_train_lm)^2)
+# Model accuracy
+xtest <- model.matrix(is_open ~.,data_test)[,-1]
+probabilities <- lm.fit %>% predict(newx = xtest)
+pred.classes <- ifelse(probabilities > 0.5, 1, 0)
 
-# Calculate Test MSE
-yhat_test_lm <- predict(lm.fit, test)
-mse_test_lm <- mean((y_test_isOpen - yhat_test_lm)^2)
+obs.classes <- data_test$is_open
 
-# Compare MSEs
-mse_train_lm
-mse_test_lm
+mean(pred.classes == obs.classes) * 100 # 74% accuracy 
 
 # Linear Model Diagnostics 
 options(scipen = 999)

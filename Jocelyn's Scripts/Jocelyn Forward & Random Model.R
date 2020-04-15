@@ -1,10 +1,9 @@
 library(tidyverse)
 library(zoo)
-library(DescTools)
-library(lubridate)
+library(randomForest)
+library(gbm)
 
-restaurants_lm <- read_csv("Data/canada_restaurants_ms.csv")
-checkIns <- read_csv("Data/canada_checkins_ms.csv")
+restaurants_lm <- read_csv("canada_restaurants_ms.csv")
 
 ############################DATA CLEANING#################################
 
@@ -36,6 +35,7 @@ unique(unlist(str_split(restaurants_lm$attributes_BusinessParking, ' ' )))
 restaurants_lm$amb_casual <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'casual': True"), 1, 0)
 restaurants_lm$amb_trendy <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'trendy': True"), 1, 0)
 restaurants_lm$amb_hipster <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'hipster': True"), 1, 0)
+restaurants_lm$amb_divey <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'divey': True"), 1, 0)
 restaurants_lm$amb_touristy <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'touristy': True"), 1, 0)
 restaurants_lm$amb_romantic <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'romantic': True"), 1, 0)
 restaurants_lm$amb_intimate <- ifelse(str_detect(restaurants_lm$attributes_Ambience, "'intimate': True"), 1, 0)
@@ -91,23 +91,6 @@ restaurants_lm$attributes_WiFi[restaurants_lm$attributes_WiFi=="'paid'"] <- 1
 restaurants_lm$attributes_WiFi[restaurants_lm$attributes_WiFi=="u'free'"] <- 2
 restaurants_lm$attributes_WiFi[restaurants_lm$attributes_WiFi=="'free'"] <- 2
 
-# Create month columns for checkins 
-checkIns %>% group_by(business_id) %>% 
-  mutate(j=ifelse(month(updatedcheckins)==1,1,0)) %>%
-  mutate(f=ifelse(month(updatedcheckins)==2,1,0)) %>%
-  mutate(mr=ifelse(month(updatedcheckins)==3,1,0)) %>%
-  mutate(ap=ifelse(month(updatedcheckins)==4,1,0)) %>%
-  mutate(m=ifelse(month(updatedcheckins)==5,1,0)) %>%
-  mutate(ju=ifelse(month(updatedcheckins)==6,1,0)) %>%
-  mutate(jl=ifelse(month(updatedcheckins)==7,1,0)) %>%
-  mutate(au=ifelse(month(updatedcheckins)==8,1,0)) %>%
-  mutate(s=ifelse(month(updatedcheckins)==9,1,0)) %>%
-  mutate(o=ifelse(month(updatedcheckins)==10,1,0)) %>%
-  mutate(n=ifelse(month(updatedcheckins)==11,1,0)) %>%
-  mutate(d=ifelse(month(updatedcheckins)==12,1,0)) %>%
-  summarize(jan=sum(j),feb=sum(f),mar=sum(mr),apr=sum(ap),may=sum(m),jun=sum(ju),
-            jul=sum(jl),aug=sum(au),sep=sum(s),oct=sum(o),nov=sum(n),dec=sum(d)) -> checkIn_months
-
 # Make new df w/ columns for ML application -- ml_df
 restaurants_lm %>% 
   mutate(attributes_GoodForKids=1*attributes_GoodForKids,
@@ -121,23 +104,19 @@ restaurants_lm %>%
          attributes_NoiseLevel=as.numeric(attributes_NoiseLevel),
          attributes_WiFi=as.numeric(attributes_WiFi),
          attributes_RestaurantsAttire=as.numeric(attributes_RestaurantsAttire),
-         price_range=attributes_RestaurantsPriceRange2,
-         review_count=Winsorize(review_count, probs = c(0.05, 0.95))) %>%
+         price_range=attributes_RestaurantsPriceRange2 ) %>%
   # Replace NAs with column median
   mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .)) %>% 
-  select(business_id, is_open, price_range, stars, review_count,
+  select(is_open, price_range, stars, review_count, 
          attributes_RestaurantsReservations, attributes_RestaurantsTakeOut,
          attributes_RestaurantsDelivery, attributes_HasTV, attributes_WiFi,
-         amb_casual, amb_trendy, amb_hipster, amb_touristy,
+         amb_casual, amb_trendy, amb_hipster, amb_touristy, amb_divey,
          amb_romantic, amb_intimate, amb_classy, amb_upscale,
          full_bar, beer_wine, attributes_RestaurantsAttire,
          attributes_GoodForKids, attributes_RestaurantsGoodForGroups,
          attributes_BikeParking, attributes_OutdoorSeating,
          park_street, park_validated, park_lot, park_garage, park_valet
-         ) -> ml_df
-
-ml_df %>% left_join(checkIn_months,by='business_id') %>% 
-  select(-business_id) -> ml_df
+  ) -> ml_df
 
 ############################SPLIT DATA FOR TRAIN/TEST############################
 
@@ -163,3 +142,115 @@ x_test_isOpen <- model.matrix(formula_isOpen, data_test)[, -1]
 
 y_train_isOpen <- data_train$is_open
 y_test_isOpen <- data_test$is_open
+view(y_train_isOpen)
+
+############################Forward Stepwise Regression############################
+xnames=colnames(ml_df)
+xnames = xnames[!xnames %in% "is_open"]
+fit_fw <- lm(is_open ~ 1, data = data_train)
+yhat_train <- predict(fit_fw, data_train)
+mse_train <- mean((data_train$is_open - yhat_train)^2)
+yhat_test <- predict(fit_fw, data_test)
+mse_test <- mean((data_test$is_open - yhat_test)^2)
+mse_test
+
+log_fw <-
+  tibble(
+    xname = "xname",
+    model = paste0(deparse(fit_fw$call), collapse = ""),
+    mse_train = mse_train,
+    mse_test = mse_test
+  )
+xnamesfw <- xnames
+while (length(xnamesfw) > 0) {
+  best_mse_train <- NA
+  best_mse_test <- NA
+  best_fit_fw <- NA
+  best_xname <- NA
+  # select the next best predictor
+  for (xname in xnamesfw) {
+    fit_fw_tmp <- update(fit_fw, as.formula(paste0(". ~ . + ", xname)))
+    yhat_train_tmp <- predict(fit_fw_tmp, data_train)
+    mse_train_tmp <- mean((data_train$is_open - yhat_train_tmp) ^ 2)
+    yhat_test_tmp <- predict(fit_fw_tmp, data_test)
+    mse_test_tmp <- mean((data_test$is_open - yhat_test_tmp) ^ 2)
+    if (is.na(best_mse_test) | mse_test_tmp < best_mse_test) {
+      best_xname <- xname
+      best_fit_fw <- fit_fw_tmp
+      best_mse_train <- mse_train_tmp
+      best_mse_test <- mse_test_tmp
+    }
+  }
+  log_fw <- log_fw %>% add_row(
+    xname = best_xname,
+    model = paste0(deparse(best_fit_fw$call), collapse = ""),
+    mse_train = best_mse_train,
+    mse_test = best_mse_test )
+  fit_fw <- best_fit_fw
+  xnamesfw <- xnamesfw[xnamesfw!=best_xname]
+}
+log_fw
+
+ggplot(log_fw, aes(seq_along(xname), mse_test)) +
+  geom_point() +
+  geom_line() +
+  geom_point(aes(y=mse_train), color="blue") +
+  geom_line(aes(y=mse_train), color="blue") +
+  scale_x_continuous("Variables", labels = log_fw$xname, breaks = seq_along(log_fw$xname)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Forward Selection Train MSE and Test MSE") +
+  ylab("MSE")
+
+## Minimum test MSE for forward selection:
+log_fw[which.min(log_fw$mse_test),]$mse_test
+## The full model for forward selection:
+log_fw[which.min(log_fw$mse_test),]$model
+## Forward selection coefficients:
+best_fw_model <- as.formula("is_open ~ review_count + full_bar + park_lot + stars +
+                              attributes_WiFi + park_street + amb_trendy + beer_wine +
+                              amb_romantic + attributes_RestaurantsReservations + amb_casual+
+                              attributes_BikeParking + park_valet + amb_touristy + park_garage +
+                              amb_hipster + amb_divey + amb_upscale + park_validated")
+best_fw_model <- lm(best_fw_model, data = data_train)
+coef(best_fw_model)### one problem here: the coefficient for amb_divery is NA ###
+
+# The final forward selection model contained 19 variables(please notice that the coefficient for amb_divery is NA). 
+# As expected, many of the variables describing the characteristics of the restaurants were included in the model. 
+# From the above results, it is clear that park_street, park_validated,park_lot, park_valet, attributes_BikeParking,amb_romantic, stars have higher correlations to whether the restaurant is open or not.
+# I would say that customers pay more attention to parking in restaurants. Therefore, the hotel's open and close have a strong relationship with parking.
+
+############################Random Forecast############################
+lf <- "is_open ~ price_range"
+for (i in 2:length(xnames)) {
+  as.character(xnames[i])
+  lf <- paste(lf, "+", xnames[i], sep = " ")
+}
+f <- as.formula(lf)
+x_train <- model.matrix(f,data_train)[ ,-1]
+y_train <- data_train$is_open
+x_test <- model.matrix(f,data_test)[ , -1]
+y_test <- data_test[ ,"is_open"]
+
+x_train_isOpen <- model.matrix(formula_isOpen, data_train)[, -1]
+x_test_isOpen <- model.matrix(formula_isOpen, data_test)[, -1]
+
+y_train_isOpen <- data_train$is_open
+y_test_isOpen <- data_test$is_open
+
+
+fit_rf <- randomForest(f,
+                       data_train,
+                       ntree=500,
+                       do.trace=F)
+varImpPlot(fit_rf)
+yhat_train_rf <- predict(fit_rf,data_train)
+mse_rf_train <- mean((yhat_train_rf-y_train_isOpen)^2)
+mse_rf_train
+yhat_test_rf <- predict(fit_rf,data_test)
+mse_rf_test <-mean((yhat_test_rf-y_test_isOpen)^2)
+mse_rf_test
+
+# The final random forest model included 29 variables. 
+# Using the variable importance plot we can see that the variables related to the attributes of the restaurant are the most predictive. 
+# On the plot we can see “review_count”, “star”, “price_range”, “attributes_WiFi”, “attributes_Has TV”, “attributes_RestaurantsDelivey”, “attributes_OutdoorSeating”, and “park_street” are the most predictive with
+# IncNodepurity all higher than 30. We got MSE for test dataset is only 0.1712097.
