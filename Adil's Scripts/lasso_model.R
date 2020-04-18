@@ -1,4 +1,4 @@
-############################LASSO REGRESSION MODEL#################################
+############################LASSO LOGISTIC REGRESSION MODEL#################################
 library(glmnet)
 
 ## Find the best lambda using cross-validation
