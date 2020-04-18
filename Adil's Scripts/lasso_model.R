@@ -15,7 +15,7 @@ probabilities <- model %>% predict(newx = x.test)
 predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
 
 # Model accuracy
-observed.classes <- data_test[1:2258,]$is_open
+observed.classes <- data_test$is_open
 mean(predicted.classes == observed.classes) * 100
 
 set.seed(007)
@@ -32,7 +32,7 @@ probabilities <- lasso.model %>% predict(newx = x.test)
 predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
 
 # Model accuracy based on min
-observed.classes <- data_test[1:2258,]$is_open
+observed.classes <- data_test$is_open
 mean(predicted.classes == observed.classes) * 100
 
 ############################ Final model with lambda.1se ############################
@@ -45,16 +45,15 @@ probabilities <- lasso.model %>% predict(newx = x.test)
 predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
 
 # Model accuracy based on 1se
-observed.classes <- data_test[1:2258,]$is_open
+observed.classes <- data_test$is_open
 mean(predicted.classes == observed.classes) * 100
 
-####### lambda.1se model is the most accurate with 73% accuracy #######
+####### lambda.1se model is the most accurate with 77% accuracy #######
 coef(cv.lasso, cv.lasso$lambda.1se)
 
 # Positive significant variables:
-#### stars - review_count - RestaurantsTakeOut - RestaurantsDelivery - GoodForKids -
-#### park_lot - sep
+#### stars - review_count - RestaurantsTakeOut - WiFi - GoodForKids - park_lot - fall
 
 # Negative significant variables:
-#### price_range - amb_trendy - amb_classy - full_bar - RestaurantAttire - OutdoorSeating -
-#### park_street - BikeParking
+#### RestaurantsReservations - amb_trendy - amb_classy - full_bar - RestaurantAttire -
+#### OutdoorSeating - park_street - BikeParking - winter - spring

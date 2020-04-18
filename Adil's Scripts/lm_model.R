@@ -10,7 +10,7 @@ pred.classes <- ifelse(probabilities > 0.5, 1, 0)
 
 obs.classes <- data_test$is_open
 
-mean(pred.classes == obs.classes) * 100 # 74% accuracy 
+mean(pred.classes == obs.classes) * 100 # 73.9% accuracy 
 
 # Linear Model Diagnostics 
 options(scipen = 999)
@@ -20,7 +20,7 @@ lmSum <- summary(lm.fit)
 stargazer::stargazer(lm.fit, type="text")
 
 # Positive significant variables (5% - 1%):
-#### stars - review_count - WiFi - park_lot
+#### stars - review_count - WiFi - park_lot - Delivary
 
 # Negative significant variables (5% - 1%):
-#### full_bar - beer_wine - BikeParking - park_street
+#### WiFi - full_bar - beer_wine - BikeParking - park_street - winter - spring - reservations

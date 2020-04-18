@@ -108,6 +108,13 @@ checkIns %>% group_by(business_id) %>%
   summarize(jan=sum(j),feb=sum(f),mar=sum(mr),apr=sum(ap),may=sum(m),jun=sum(ju),
             jul=sum(jl),aug=sum(au),sep=sum(s),oct=sum(o),nov=sum(n),dec=sum(d)) -> checkIn_months
 
+# % of check-ins each season 
+checkIn_months %>% group_by(business_id) %>% 
+  mutate(months = sum(jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec),
+         winter = sum(dec,jan,feb)/months, spring = sum(mar,apr,may)/months, 
+         summer = sum(jun,jul,aug)/months, fall = sum(sep,oct,nov)/months) %>% 
+  select(winter, spring, summer, fall) -> checkIn_seasons
+
 # Make new df w/ columns for ML application -- ml_df
 restaurants_lm %>% 
   mutate(attributes_GoodForKids=1*attributes_GoodForKids,
@@ -136,9 +143,9 @@ restaurants_lm %>%
          park_street, park_validated, park_lot, park_garage, park_valet
          ) -> ml_df
 
-ml_df %>% left_join(checkIn_months,by='business_id') %>% 
+ml_df %>% left_join(checkIn_seasons,by='business_id') %>% 
   select(-business_id) -> ml_df
-
+ml_df <- na.omit(ml_df)
 ############################SPLIT DATA FOR TRAIN/TEST############################
 
 # Train/Test Split 
