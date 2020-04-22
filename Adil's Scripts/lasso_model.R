@@ -1,5 +1,6 @@
 ############################LASSO LOGISTIC REGRESSION MODEL#################################
 library(glmnet)
+library(dplyr)
 
 ## Find the best lambda using cross-validation
 set.seed(007) 
