@@ -108,11 +108,10 @@ checkIns %>% group_by(business_id) %>%
   summarize(jan=sum(j),feb=sum(f),mar=sum(mr),apr=sum(ap),may=sum(m),jun=sum(ju),
             jul=sum(jl),aug=sum(au),sep=sum(s),oct=sum(o),nov=sum(n),dec=sum(d)) -> checkIn_months
 
-# % of check-ins each season 
+# check-ins by season w/ avg per month 
 checkIn_months %>% group_by(business_id) %>% 
-  mutate(months = sum(jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec),
-         winter = sum(dec,jan,feb)/months, spring = sum(mar,apr,may)/months, 
-         summer = sum(jun,jul,aug)/months, fall = sum(sep,oct,nov)/months) %>% 
+  mutate(winter = sum(mean(dec),mean(jan),mean(feb)), spring = sum(mean(mar),mean(apr),mean(may)), 
+         summer = sum(mean(jun),mean(jul),mean(aug)), fall = sum(mean(sep),mean(oct),mean(nov))) %>% 
   select(winter, spring, summer, fall) -> checkIn_seasons
 
 # Make new df w/ columns for ML application -- ml_df
