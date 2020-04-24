@@ -170,5 +170,5 @@ ggplot(review_per_personT1,aes(CohortGroup,CohortPeriod,fill=ReviewPerPerson))+
 *User Rentention* 
   - During 2015 to 2017, over 40% new user would return to review restaurant on Yelp within two quarters, over 30% users keep reviewing on yelp after one year. After two years, the retention rate went to 20% or less. 
   - However, user retention in 2018 4th quarter drop a lot. Around 15% users come back to Yelp review in this 4th quater only, even the new users who start to use Yelp within one year. (Could it due to data loss?)   
-*User Review posted* New users came in 2015 and 2016 are more likely contributed to Yelp content in first quarter than new users came in after that.
+*User Review posted* New users came in 2015 and 2016 are more likely contributed to Yelp content in first quarter than new users came in after 2016.
 *Average review posting* The second quarter is the core user retention period. Users not only keep relativly high rentetion rate, but also likely to post more reviews in this period.
