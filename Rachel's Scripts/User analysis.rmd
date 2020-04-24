@@ -220,8 +220,8 @@ ggplot(words_length, aes(x=year_act, y=avg.words)) +
   geom_line(aes(color=active)) +  
   scale_color_manual(values= c("#f8ada8", "#F15C4f")) +
   labs(x='Active reviewers',
-       y='Average number of words in reviews',
-       title = 'Active reviewers write more in review') +
+       y='Average word length in reviews',
+       title = 'Active reviewers write longer in review') +
   theme(
     panel.grid.major = element_blank(), 
     panel.grid.minor = element_blank(),
