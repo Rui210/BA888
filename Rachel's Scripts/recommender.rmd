@@ -1,0 +1,158 @@
+---
+title: "Recommender"
+author: "Rui Xu"
+date: "4/16/2020"
+output: pdf_document
+---
+```{r}
+library(tidyverse)
+library(lubridate)
+library(reshape2)
+library(zoo)
+options(scipen=999)
+
+library(recommenderlab) # for recommender
+
+reviews = read_csv('~/Desktop/Capstone/canada_reviews_ms.csv')
+restaurant = read.csv('~/Desktop/Capstone/canada_restaurants_ms_edits.csv')
+```
+```{r}
+# Pick restaurants into recommender sample
+restaurant %>%
+  filter(is_open == 1) %>%
+  group_by(city) %>%
+  summarise(num_rest = sum(n()),
+            num_review = sum(review_count))
+```
+I pick open restaurants in Mississauga where small number of business exists, in case further technique problem when manipulate data structure.
+```{r message=FALSE, warning=FALSE}
+RecomRest = restaurant %>%
+  filter(is_open == 1,
+         city == 'Mississauga') %>%
+  select(business_id, rest_name = name) %>%
+  inner_join(.,reviews, by='business_id')
+```
+```{r}
+# Inspect whether reviewers who post less would have a different rating scheme
+ggplot(RecomRest, aes(y=average_stars,x=review_count)) +
+  geom_point(size=0.8) +
+  xlim(c(0,50))
+```
+```{r}
+ggplot(RecomRest, aes(y=average_stars,x=review_count)) +
+  geom_point(size=0.8) +
+  xlim(c(600,5000))
+```
+
+Pre-process Data
+```{r}
+# reassign unique user_id and unique business_id
+userId = RecomRest %>%
+  select(user_id) %>%
+  unique() %>%
+  mutate(userIdR = row_number())
+bussId = RecomRest %>%
+  select(business_id) %>%
+  unique() %>%
+  mutate(bussIdR = row_number())
+```
+```{r}
+# keep varibles that used for recommendation system: users id, star rating, business id
+tmp = inner_join(userId, RecomRest, 'user_id')
+RecomData = inner_join(tmp, bussId, 'business_id')
+RecomData1 = RecomData %>%
+  select(userIdR,stars,bussIdR,date)
+RecomData1
+RecomData1$userIdR = as.character(RecomData$userIdR)
+RecomData1$userIdR = as.numeric(RecomData1$userIdR)
+RecomData1$bussIdR = as.character(RecomData1$bussIdR)
+RecomData1$bussIdR = as.numeric(RecomData1$bussIdR)
+RecomData1$date = as.numeric(as.POSIXct(RecomData1$date))
+```
+
+
+```{r}
+RecomData1
+```
+```{r}
+write_csv(RecomData1, 'RecomData.csv')
+df = read_csv('RecomData.csv')
+```
+```{r}
+glimpse(df)
+```
+```{r}
+# Exist one userId rating one bussId multiple times, we select the least date one as final stars.
+df1 = df%>%
+  group_by(userIdR,bussIdR) %>%
+  filter(row_number() == 1) %>%
+  select(-date)
+```
+```{r}
+## put the dataset into a wide format
+ratingR = df1 %>%
+  pivot_wider(names_from = bussIdR,
+              values_from = stars,
+              names_prefix = 'r')
+
+ratingR[1:5, 1:5]
+```
+```{r}
+dim(ratingR)
+```
+```{r}
+## convert the dataframe into a matrix to retain user ids
+rownames(ratingR) =  ratingR$userIdR
+ratingR$userIdR = NULL
+rat_mat = as.matrix(ratingR)
+rownames(rat_mat)[1:5]
+colnames(rat_mat)[1:5]
+```
+```{r}
+## convert to realRatingMatrix from package
+## use that matrix to create a testing scheme
+rat_mat = as(rat_mat, "realRatingMatrix")
+SAMPLE = evaluationScheme(rat_mat, 
+                          method="split", 
+                          train=.5, 
+                          given=1)
+class(SAMPLE)
+SAMPLE
+```
+```{r}
+# Model fitting
+reco1 = Recommender(getData(SAMPLE, "train"), 
+                    method="UBCF", # User-Based Collaborative filtering - utilizes user similarities
+                    param = list(normalize = NULL, # do not normalize the ratings
+                                 method = "Cosine")) # use cosine similiarty on the ratings
+
+class(reco1) 
+reco1 # learned using 6903 users.
+getModel(reco1)
+```
+
+```{r}
+# Look at the prediction
+N_PREDS = 10 # set the number of recommendations in the top-N list
+pred1 = predict(reco1, getData(SAMPLE, "known"), n=N_PREDS)
+```
+```{r}
+# lets convert to a list and inspect it
+pred1_list = as(pred1, "list")
+length(pred1_list)
+pred1_list[1]
+```
+Based on user 2 (user_id: kgRTizyE1oY441S8gn_eZw) pervious restaurant rating records, we could recommend this customer a list of 10 restauarants which someone having similar rating records like he/she also rated high star to.  
+
+```{r}
+pred1_list[2]
+```
+
+```{r}
+calcPredictionAccuracy(pred1, 
+                       getData(SAMPLE, "unknown"), 
+                       goodRating = 5, 
+                       given=N_PREDS)
+```
+True Positive : 0.0184
+False Positive : 4.
