@@ -26,7 +26,8 @@ library(lubridate)
 #Loading the datasets
 #restaurants <- read_csv("/Users/Adil/Documents/RStudio/cananda_restaurant.csv") #adil file path
 #resNotCleaned <- read_csv("Data/Canada minus Montreal Review Count.csv")
-restaurants <- read_csv("Data/canada_restaurants_ms.csv") #missy file path
+#restaurants <- read_csv("Data/canada_restaurants_ms.csv") #missy file path
+restaurants <- read_csv("Data/canada_restaurants_ms_edits.csv")
 #dim(restaurants)
 #reviews <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_reviews.csv") #adil file path
 reviews <- read_csv("Data/canada_reviews_ms.csv") #missy file path
@@ -84,7 +85,9 @@ restaurants %>%
   geom_bar(fill=c("#F15C4F", "#FCD6D3","#F8ADA8"))+
   theme_classic()+
   labs(title = "Restaurant Distribution by City",
-       y="Amount")
+       y="# of Restaurants") +
+  theme(axis.text = element_text(size = 13)) +
+  theme(axis.title = element_text(size = 13)) 
 ```
 
 Approximately 6,000 restaurants in the dataset are open and approximately 2,000 restaurants have closed. 
@@ -92,14 +95,15 @@ Approximately 6,000 restaurants in the dataset are open and approximately 2,000 
 open <- restaurants %>% group_by(is_open) %>% count(is_open)
 open[open$is_open==0,1]="no"
 open[open$is_open==1,1]="yes"
-open
 open %>% 
   ggplot(aes(is_open,n))+
   geom_col(fill=c("#F15C4F", "#F8ADA8"))+
   labs(title = "Current Restuarant Status",
-       x="is open?",
-       y="Amount")+
-  theme_classic()
+       x="Still in Business?",
+       y="# of Restaurants")+
+  theme_classic() +
+   theme(axis.text = element_text(size = 13)) +
+  theme(axis.title = element_text(size = 13)) 
 ```
 
 The majority of the restaurants in the dataset are in the second lowest, or "2-Dollar-Sign" price range. 
@@ -122,6 +126,9 @@ print(paste0("average # of reviews: ", round(nrow(reviews)/nrow(restaurants))))
 
 The distribution of the review length is right-skewed with a mode of around 30 to 60 words, which represents the word count of over 20% of all reviews. More than 50% of all the reviews are between 30 to 120 words. The average review length is around 130 words while the median is around 100 words. 
 ```{r}
+review_length <- sapply(strsplit(reviews$text, " "), length)
+review_length <- as.data.frame(review_length)
+
 # Dist freq 
 ggplot(data=review_length, aes(x=review_length)) +
 geom_histogram(aes(y = stat(count) / sum(count)),
@@ -140,11 +147,21 @@ print(paste0("median ", (median(review_length$review_length))))
 ```
 
 Reviewers giving 1 and 2 star reviews wrote longer reviews that reviewers giving 3, 4, and 5 star reviews. The average length of 2 star reviews, the shortest average reviews were 150 words, while the average length of 5 star reviews, the longest average reviews is 113 words. 
+
 ```{r}
+reviews$review_length <- review_length$review_length
+
 reviews %>%
   group_by(stars) %>% 
   summarise(avgLength = round(mean(review_length))) %>% 
-  arrange(desc(avgLength))
+  arrange(desc(avgLength)) %>% 
+  ggplot() +
+  geom_col(aes(x = stars, y = avgLength), fill = "#F8ADA8") +
+  labs(title="Star Rating by Review Length",
+       x="Star Rating",y="Avg Review Length (words)") +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 13)) +
+  theme(axis.title = element_text(size = 13)) 
 ```
 
 ```{r}
@@ -203,9 +220,19 @@ checkin %>%
   ggplot() +
   geom_histogram(aes(x = n), fill="#D32323", binwidth = 10) +
   labs(title="Distribution of Check-In Count", x = "Check-Ins")+
-  theme_classic()
+  theme_minimal()
 
 
+```
+
+```{r}
+restaurants %>% 
+  ggplot() +
+  geom_bar(aes(x = stars) , fill = "#F15C4F") + 
+  theme_minimal() +
+  labs(title="Distribution of Check-In Count", x = "Star Rating", y = "# of Restaurants") +
+ theme(axis.text = element_text(size = 13)) +
+  theme(axis.title = element_text(size = 13)) 
 ```
 
 
@@ -228,7 +255,8 @@ ggplot(new_table, aes(x=stars)) +
 ggplot(restaurants)+
   geom_bar(aes(x=city,fill=factor(stars)),position="dodge")+
   labs(title="Distribution of star ratings in Different City") +
-  scale_fill_manual(values = c("#D32323","#F15C4F","#F8ADA8","#FCD6D3","#E6E6E6","#999999","#CCCCCC","#666666","#4D4D4D","#333333"))
+  scale_fill_manual(values = c("#D32323", "#F15C4F", "#F8ADA8", "#FCD6D3", "#E6E6E6", "#999999", "#CCCCCC","#666666","#4D4D4D","#333333")) +
+  theme_minimal()
 ##Toronto has the largest number of hotels, and Toronto also has the largest number of 5, 4 
 ##and 3 stars resutaurants.
 ```
