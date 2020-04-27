@@ -53,8 +53,9 @@ mean(predicted.classes == observed.classes) * 100
 coef(cv.lasso, cv.lasso$lambda.1se)
 
 # Positive significant variables:
-#### stars - review_count - RestaurantsTakeOut - WiFi - GoodForKids - park_lot - fall
+#### park_lot - attributes_GoodForKids - stars - attributes_RestaurantsTakeOut
+#### attributes_WiFi - review_count - summer
 
 # Negative significant variables:
-#### RestaurantsReservations - amb_trendy - amb_classy - full_bar - RestaurantAttire -
-#### OutdoorSeating - park_street - BikeParking - winter - spring
+#### attributes_OutdoorSeating - amb_classy - attributes_RestaurantsReservations - amb_trendy
+#### attributes_RestaurantsAttire - attributes_BikeParking - full_bar - park_street
