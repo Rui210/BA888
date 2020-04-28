@@ -262,7 +262,7 @@ fig11 <- reviewer %>%
   geom_bar(aes(x = year, y = cum), stat = 'identity', fill = "#F15C4f") +
   geom_line(aes(x = year, y = n)) +
   scale_x_continuous(breaks = reviewer$year) +
-  labs(title = "Frowth of Active Users on Yelp (Fig. 11)",
+  labs(title = "Growth of Active Users on Yelp (Fig. 11)",
        subtitle = "and annual increase amount",
        x = 'Years',
        y = 'Number of Reviewers') +
