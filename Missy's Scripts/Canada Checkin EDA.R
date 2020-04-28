@@ -67,17 +67,12 @@ sampleReviews <- sample_n(reviews, 200000)
 tokens = tokens(reviews$text, 
                 remove_punct = T,
                 remove_numbers = T)
-
 sw <- c(stopwords(),"ã","brã","lã","e")
-
 tokens <- tokens_remove(tokens, pattern = sw)
-
 sdfm = dfm(tokens,
            ngrams = 2)
-
 topBigrams <- topfeatures(sdfm,10)
 topBigrams <- as.data.frame(topBigrams)
-
 names(topBigrams)[1] <- "Count"
 bigrams <- rownames(topBigrams)
 rownames(topBigrams) <- NULL
@@ -85,7 +80,6 @@ topBigrams$Bigrams <- bigrams
 
 topBigrams %>% 
   arrange(desc(Count)) %>% 
-  #sort(Count, decreasing = TRUE) %>% 
   ggplot() +
   geom_col(aes(x = reorder(Bigrams, Count), y = Count), fill = "#F15C4F") +
   coord_flip() +

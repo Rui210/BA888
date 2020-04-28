@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
+
 library(tidyverse)
 library(jsonlite)
 library(tidytext)
@@ -20,21 +21,19 @@ library(ggthemes)
 library(readr)
 library(tidyr)
 library(lubridate)
+library(gridExtra)
+library(quanteda)
 ```
 
 ```{r message=FALSE, warning=FALSE}
 #Loading the datasets
-#restaurants <- read_csv("/Users/Adil/Documents/RStudio/cananda_restaurant.csv") #adil file path
-#resNotCleaned <- read_csv("Data/Canada minus Montreal Review Count.csv")
 #restaurants <- read_csv("Data/canada_restaurants_ms.csv") #missy file path
 restaurants <- read_csv("Data/canada_restaurants_ms_edits.csv")
-#dim(restaurants)
 #reviews <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_reviews.csv") #adil file path
-reviews <- read_csv("Data/canada_reviews_ms.csv") #missy file path
+reviews <- read.csv("Data/canada_reviews_ms.csv")
 #checkIns <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_checkin.csv")
 checkin <- read_csv("Data/canada_checkins_ms.csv")
 ```
-
 
 ### Business Problem   
 Finding restaurants through directory services apps and review forum apps have become a crucial part of business discovery. It has changed the way restaurants of different tiers attain brand loyalty and market themselves.   
@@ -74,217 +73,207 @@ Table 4: Restaurant reviews (371,610 rows) - reduced to 320 MB (CSV) from 4.98 G
 
 ###Exploratory Data Analysis
 
-##Restaurants Exploratory Data Analysis 
-
-There are 1,422 restaurants in Calgary, 808 restaurants in Mississauga, Toronto has the most restaurants with 5,547.
+The dataset contained 7,530 restaurants from three Canadian cities. Toronto had the majority of restaurants 5,372 (70%), followed by Calgary with 1,365 (18%), and Mississauga with 794 (11%). The dataset contained both open and permanently closed restaurants; 5,699 (76%) restaurants were open and 1,831 (24%) restaurants had gone out of business.
 ```{r}
-# restaurants are in each city
-#restaurants %>% group_by(city) %>% count(city)
-restaurants %>% 
+fig1 <- restaurants %>% 
   ggplot(aes(x=city))+
   geom_bar(fill=c("#F15C4F", "#FCD6D3","#F8ADA8"))+
   theme_classic()+
-  labs(title = "Restaurant Distribution by City",
+  labs(title = "Restaurant Distribution by City (Fig. 1)",
        y="# of Restaurants") +
   theme(axis.text = element_text(size = 13)) +
   theme(axis.title = element_text(size = 13)) 
-```
 
-Approximately 6,000 restaurants in the dataset are open and approximately 2,000 restaurants have closed. 
-```{r}
 open <- restaurants %>% group_by(is_open) %>% count(is_open)
 open[open$is_open==0,1]="no"
 open[open$is_open==1,1]="yes"
-open %>% 
+fig2 <- open %>% 
   ggplot(aes(is_open,n))+
   geom_col(fill=c("#F15C4F", "#F8ADA8"))+
-  labs(title = "Current Restuarant Status",
+  labs(title = "Current Restuarant Status (Fig. 2)",
        x="Still in Business?",
        y="# of Restaurants")+
   theme_classic() +
    theme(axis.text = element_text(size = 13)) +
   theme(axis.title = element_text(size = 13)) 
+
+grid.arrange(fig1, fig2, nrow = 2)
 ```
 
-The majority of the restaurants in the dataset are in the second lowest, or "2-Dollar-Sign" price range. 
+Check-In dates ranged from 2010 to 2018. The average restaurant had 111 check-ins with a median of 57 and a maximum of 2,872 check-ins. Check-ins steadily increased year over year in the data until about 2015-2017 when they reached a peak. The first year to see a decrease in check-ins from the previous year was 2018. The check-in data does exhibit some seasonality with visits appearing to typically be higher in the summer months than winter months. 
+
 ```{r message=FALSE, warning=FALSE}
-restaurants %>% 
-  ggplot(aes(attributes_RestaurantsPriceRange2))+
-  geom_histogram(binwidth=1,fill="#F15C4F",color="#4D4D4D")+
-  labs(title = "Distribution of Price Range",
-       x="Price Range")+
+fig3 <- checkin %>% 
+  group_by(updatedcheckins) %>% 
+  add_count() %>% 
+  ggplot() +
+  geom_smooth(aes(x = month(updatedcheckins), y = n, color = as.factor(year(updatedcheckins))), size = 2, se = F) + 
+  theme_minimal()+
+  theme(axis.text.x=element_text(angle=90, hjust=1)) +
+  labs(title = "Check-In by Day (Fig. 3)", x = "month", y="count", color = "year") +
+  scale_x_continuous(breaks=seq(0,12,1)) +
+  scale_colour_manual(values = c("#D32323","#F15C4F","#F8ADA8","#FCD6D3","#E6E6E6","#999999","#CCCCCC","#666666","#4D4D4D","#333333"))
+
+fig4 <- checkin %>% 
+  group_by(business_id) %>% 
+  count(.) %>% 
+  ggplot() +
+  geom_histogram(aes(x = n), fill="#D32323", binwidth = 10) +
+  labs(title="Distribution of Check-In Count (Fig. 4)", x = "Check-Ins")+
   theme_classic()
+
+grid.arrange(fig3, fig4, nrow = 2)
 ```
 
-##Reviews Exploratory Data Analysis
-The dataset contains `nrow(reviews)` for `nrow(restaurants)` restaurants. On average, each restaurant has 48 reviews. 
+The distribution of star ratings for restaurants was left skewed. The majority of restaurants had a four-star rating with the second most common rating being 3.5 stars. The distribution of star ratings between the three cities was fairly similar, however, Calgary had a slightly higher percentage of 4+ star restaurants than Toronto and Mississauga. 
+
 ```{r message=FALSE, warning=FALSE}
+fig5 <- restaurants %>% 
+  ggplot() +
+  geom_bar(aes(stars),fill="#F15C4F") +
+  labs(title = "Distribution of Star Ratings (Fig. 5)", x = "Star Rating", y = "# of Restaurants") +
+  theme_minimal()
+fig5
+```
+
+
+```{r}
+restaurants %>% 
+  count(city, stars) %>% 
+  group_by(city) %>% 
+  mutate(percent = n / sum(n) ) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = city, y = percent, fill = as.factor(stars))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title="Distribution of Star Ratings by City (Fig. 6)", x = "City", y = "Percent of Restaurants", fill = "Star Rating") +
+  scale_fill_manual(values = c("#D32323", "#F15C4F", "#F8ADA8", "#FCD6D3", "#E6E6E6", "#999999", "#CCCCCC","#666666","#4D4D4D","#333333")) +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 13)) +
+  theme(axis.title = element_text(size = 13)) 
+```
+
+The dataset contained over 480k reviews. The mean number of reviews per restaurant was 64. The distribution of the review length is right-skewed and more than 50% of all the reviews were between 25 to 120 words. The average review length was around 130 words while the median was around 100 words. The most common bigrams found in reviews included “come back”, “ice cream” and “go back”. 
+
+```{r}
 print(paste0("number of reviews: ", nrow(reviews)))
 print(paste0("average # of reviews: ", round(nrow(reviews)/nrow(restaurants))))
-#summary(reviews)
 ```
 
-The distribution of the review length is right-skewed with a mode of around 30 to 60 words, which represents the word count of over 20% of all reviews. More than 50% of all the reviews are between 30 to 120 words. The average review length is around 130 words while the median is around 100 words. 
 ```{r}
-review_length <- sapply(strsplit(reviews$text, " "), length)
+stringsAsFactors = FALSE
+review_length <- sapply(strsplit(as.character(reviews$text), " "), length)
 review_length <- as.data.frame(review_length)
 
 # Dist freq 
-ggplot(data=review_length, aes(x=review_length)) +
+fig7 <- ggplot(data=review_length, aes(x=review_length)) +
 geom_histogram(aes(y = stat(count) / sum(count)),
                bins = 25, fill="#D32323") +
   scale_y_continuous(labels = scales::percent) +
-  labs(title="Distribution of Review Length",
+  labs(title="Distribution of Review Length (Fig. 7)",
        x="Review Length",y="Relative Frequency") +
   theme_minimal() + scale_x_continuous(breaks=seq(0,1000,25)) +
   theme(axis.text.x=element_text(angle=90, hjust=1))
 
+fig7
 ```
 
 ```{r}
-print(paste0("mean ", (round(mean(review_length$review_length)))))
-print(paste0("median ", (median(review_length$review_length))))
+tokens = tokens(as.character(reviews$text), 
+                remove_punct = T,
+                remove_numbers = T)
+
+sw <- c(stopwords(),"ã","brã","lã","e")
+tokens <- tokens_remove(tokens, pattern = sw)
+sdfm = dfm(tokens,
+           ngrams = 2)
+topBigrams <- as.data.frame(topfeatures(sdfm,10))
+names(topBigrams)[1] <- "Count"
+bigrams <- rownames(topBigrams)
+topBigrams$Bigrams <- bigrams
+
+fig8 <- topBigrams %>% 
+  arrange(desc(Count)) %>% 
+  ggplot() +
+  geom_col(aes(x = reorder(Bigrams, Count), y = Count), fill = "#F15C4F") +
+  coord_flip() +
+  theme_minimal() +
+  labs(title="Customer Review Top Bigrams (Fig. 8)", x = "Bigram", y = "Count") +
+  theme(axis.text = element_text(size = 13)) +
+  theme(axis.title = element_text(size = 13))
+fig8
 ```
 
-Reviewers giving 1 and 2 star reviews wrote longer reviews that reviewers giving 3, 4, and 5 star reviews. The average length of 2 star reviews, the shortest average reviews were 150 words, while the average length of 5 star reviews, the longest average reviews is 113 words. 
+Reviewers submitting 1 and 2-star reviews wrote longer reviews on average than reviewers who gave 3, 4, and 5-star reviews. The number of reviews increased year over year to a peak in 2017 of just under 100,000 reviews.
 
 ```{r}
 reviews$review_length <- review_length$review_length
 
-reviews %>%
+fig9 <- reviews %>%
   group_by(stars) %>% 
   summarise(avgLength = round(mean(review_length))) %>% 
   arrange(desc(avgLength)) %>% 
   ggplot() +
   geom_col(aes(x = stars, y = avgLength), fill = "#F8ADA8") +
-  labs(title="Star Rating by Review Length",
+  labs(title="Star Rating by Review Length (Fig.9)",
        x="Star Rating",y="Avg Review Length (words)") +
   theme_minimal() +
   theme(axis.text = element_text(size = 13)) +
   theme(axis.title = element_text(size = 13)) 
+fig9
 ```
 
 ```{r}
-#Missy still working on this chart - will show star ratings by number of reviews written
-#want to show if people with less reviews 
+posts = reviews %>%
+  select(date, review_count, user_id) %>%
+  mutate(date = year(date)) %>%
+  rename(year = date) %>%
+  count(year) %>%
+  mutate(cum = cumsum(n))
 
-#number of reviews by average star rating
-reviews$avg_stars_buckets <- cut(x = reviews$average_stars, breaks = c(0,1,2,3,4,5))
-reviews$review_count <- cut()
-reviews %>% 
-  select(review_count, average_stars_buckets) %>% 
-  distinct() +
-  
-  
-  
-#distance_buckets <- cut(x = delayed_flights_only$DISTANCE, breaks = c(0,500,1000,1500,2000,2500,3000))
-#levels(distance_buckets) <- c("<500","501 - 1000", "1001 - 1500", "1501 - 2000", "2001 - 2500","2501 - 3000",">3000")
-#delayed_flights_only$distance_buckets <- distance_buckets
-```
-
-
-
-## Check-Ins Exploratory Data Analysis:
-
-```{r}
-#rachel making new chart
-
-#manually make a bar chart - last bucket will be over 1000 checkin 
-checkin %>% 
-  group_by(business_id) %>% 
-  count(.) %>% 
+fig10 <- posts %>%
   ggplot() +
-  geom_histogram(aes(x = n), fill="#D32323", binwidth = 10) +
-  labs(title="Distribution of Check-In Count", x = "Check-Ins")+
-  theme_classic()
-
-
-postcount[postcount$review_count >= 1000, "review_count"] = 1000
-postcount %>%
-  ggplot() +
-  geom_histogram(aes(x = review_count), bins = 25, color = 'white') +
-  labs(title = 'Review Distribution',
-       x = 'review') +
+  geom_bar(aes(x = year, y = n), stat = 'identity', fill = "#f8ada8") +
+  geom_line(aes(x = year, y = cum)) +
+  scale_x_continuous(breaks = reviewer$year) +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Number of Reviews by Year (Fig. 10)",
+       subtitle = "and accumulated reviews count",
+       x = 'Years',
+       y = 'Number of reviews')+
   theme_minimal()
+fig10
+```
 
+By 2018, there were over 900,000 users who had written at least one review, or checked-in once at one of the restaurants in the dataset. The number of new users increased year over year until 2015 when annual new users peaked. 
 
-checkins$checkinbucket <- checkins$updatedcheckins
+For the purposes of this project, an active user is defined as someone who posts more than the average reviewer in a year. The number of users who are considered active was increasing year over year until 2018. The percent of users who were considered active in 2017 was 24% compared to 22% in 2018. Although the total number of users grew year over year, the number of reviews written on average steadily decreased from a peak of around 7 reviews per user in 2007 to just over 2 reviews in 2018. 
 
-#checkins[checkins$checkinbucket >= 1000, "checkinbucket2"] = 1000
+```{r}
+data = reviews %>%
+  select(yelping_since, review_count, user_id)
+data = data[!duplicated(data),]
+reviewer = data %>%
+  mutate(year = year(yelping_since)) %>%
+  count(year) %>%
+  mutate(cum = cumsum(n))
 
-checkins$checkinbucket <- ifelse(checkins$checkinbucket > 999, 1000, checkins$checkinbucket)
-
-checkin %>% 
-  group_by(business_id) %>% 
-  count(.) %>% 
+fig11 <- reviewer %>%
   ggplot() +
-  geom_histogram(aes(x = n), fill="#D32323", binwidth = 10) +
-  labs(title="Distribution of Check-In Count", x = "Check-Ins")+
+  geom_bar(aes(x = year, y = cum), stat = 'identity', fill = "#F15C4f") +
+  geom_line(aes(x = year, y = n)) +
+  scale_x_continuous(breaks = reviewer$year) +
+  labs(title = "Frowth of Active Users on Yelp (Fig. 11)",
+       subtitle = "and annual increase amount",
+       x = 'Years',
+       y = 'Number of Reviewers') +
   theme_minimal()
-
-
-```
-
-```{r}
-restaurants %>% 
-  ggplot() +
-  geom_bar(aes(x = stars) , fill = "#F15C4F") + 
-  theme_minimal() +
-  labs(title="Distribution of Check-In Count", x = "Star Rating", y = "# of Restaurants") +
- theme(axis.text = element_text(size = 13)) +
-  theme(axis.title = element_text(size = 13)) 
+fig11
 ```
 
 
-```{r message=FALSE, warning=FALSE}
-### Checkins by Star Ratings
-options(scipen= 10)
-restaurants$business_id=as.character(restaurants$business_id)
-new_table=left_join(x=checkin,y=restaurants)
-checkin_count=new_table %>% group_by(stars) %>% count(.)
-#glimpse(new_table)
-ggplot(new_table, aes(x=stars)) +
-  geom_histogram(stat="count",fill = "#F15C4F") +
-  labs(title="Checkins by Star Ratings")+
-  theme_classic() +
-  labs(title="Distribution of Star Ratings", x = "Star Rating", y = "# of Restaurants") +
-   theme(axis.text = element_text(size = 13)) +
-  theme(axis.title = element_text(size = 13)) 
-##4 stars have the largest numbers of checkins, followed by 3.5 and 3. While 5 and 1 stars
-##have the smallest number of checkins maybe because it is too expensive.
-```
-
-```{r}
-### Distribution of star ratings
-ggplot(restaurants)+
-  geom_bar(aes(x=city,fill=factor(stars)),position="dodge")+
-  labs(title="Distribution of star ratings by City", x = "City", y = "Number of Restaurants") +
-  scale_fill_manual(values = c("#D32323", "#F15C4F", "#F8ADA8", "#FCD6D3", "#E6E6E6", "#999999", "#CCCCCC","#666666","#4D4D4D","#333333")) +
-  theme_minimal() +
-  theme(axis.text = element_text(size = 13)) +
-  theme(axis.title = element_text(size = 13)) 
-##Toronto has the largest number of hotels, and Toronto also has the largest number of 5, 4 
-##and 3 stars resutaurants.
-```
-
-```{r}
-
-```
 
 
-##Check-In EDA
 
-Check-Ins steadily increased year over year until about 2015 when they capped out. 2018 was the first year to see a decrease in checkins. In general customers check in more frequently in summer months than winter months. 
-```{r}
-checkin %>% 
-  group_by(updatedcheckins) %>% 
-  add_count() %>% 
-  ggplot() +
-  geom_smooth(aes(x = month(updatedcheckins), y = n, color = as.factor(year(updatedcheckins))), size = 2) + 
-  theme_minimal()+
-  theme(axis.text.x=element_text(angle=90, hjust=1)) +
-  labs(title = "Check-In by Day", x = "month", y="count", color = "year") +
-  scale_x_continuous(breaks=seq(0,12,1)) +
-  scale_colour_manual(values = c("#D32323","#F15C4F","#F8ADA8","#FCD6D3","#E6E6E6","#999999","#CCCCCC","#666666","#4D4D4D","#333333"))
-```
+
+
 
