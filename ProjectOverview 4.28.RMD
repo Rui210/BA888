@@ -410,7 +410,7 @@ ggplot(words_length, aes(x=year_act, y=avg.words)) +
     plot.background = element_rect(fill = "transparent",colour = NA)
   ) 
 ```
-
+dd
 
 
 
