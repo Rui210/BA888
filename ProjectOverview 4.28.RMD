@@ -296,12 +296,12 @@ gf = act_year %>%
   group_by(year, mean, active) %>%
   count(active)
 
-ggplot(gf,aes(x=year)) + 
+fig12 <- ggplot(gf,aes(x=year)) + 
   geom_bar(aes(y=n, fill = active), stat = 'identity', alpha = 0.8) +
   scale_fill_manual(values= c("#f8ada8", "#F15C4f")) +
   scale_x_continuous(breaks = gf$year) + 
   labs(y='Users',
-       title = 'Yelp active users gradually abate from 2007 to 2018') +
+       title = 'Yelp active users gradually abate from 2007 to 2018 (Fig. 12)') +
   theme(
     panel.grid.major = element_blank(), 
     panel.grid.minor = element_blank(),
@@ -310,6 +310,7 @@ ggplot(gf,aes(x=year)) +
   ) + 
   geom_line(aes(y = mean*4000)) + 
   scale_y_continuous(sec.axis = sec_axis(~./4000, name = "Average num of review posted"))
+fig12
 
 ```
 
@@ -373,18 +374,19 @@ tmp_stars = viewers15_18 %>%
   ungroup() %>%
   mutate(active = ifelse(active==1, 'yes', 'no')) 
 
-ggplot(tmp_stars, aes(avg_annual_stars, fill = active)) + 
+fig13 <- ggplot(tmp_stars, aes(avg_annual_stars, fill = active)) + 
   scale_fill_manual(values= c("#626262", "#F15C4f")) +
   geom_density(alpha = 0.2) +
   facet_wrap(.~ year_act, ncol = 2) +
   labs(x='Annual rating in average',
-       title = 'Active reviewers rating restuarant concentrated around 4 stars') +
+       title = 'Active reviewers rating restuarant concentrated around 4 stars (Fig. 13)') +
   theme(
     panel.grid.major = element_blank(), 
     panel.grid.minor = element_blank(),
     panel.background = element_rect(fill = "transparent",colour = NA),
     plot.background = element_rect(fill = "transparent",colour = NA)
   )
+fig13
 ```
 
 ```{r}
@@ -397,18 +399,19 @@ words_length = viewers15_18 %>%
   group_by(year_act, active) %>%
   summarise(avg.words = mean(words_length))
 
-ggplot(words_length, aes(x=year_act, y=avg.words)) +
+fig14 <- ggplot(words_length, aes(x=year_act, y=avg.words)) +
   geom_line(aes(color=active)) +  
   scale_color_manual(values= c("#f8ada8", "#F15C4f")) +
   labs(x='Active reviewers',
        y='Average word length in reviews',
-       title = 'Active reviewers write longer in review') +
+       title = 'Active reviewers write longer in review (Fig. 14)') +
   theme(
     panel.grid.major = element_blank(), 
     panel.grid.minor = element_blank(),
     panel.background = element_rect(fill = "transparent",colour = NA),
     plot.background = element_rect(fill = "transparent",colour = NA)
   ) 
+fig14
 ```
 dd
 
