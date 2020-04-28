@@ -111,11 +111,18 @@ colnames(rat_mat)[1:5]
 ```{r}
 ## convert to realRatingMatrix from package
 ## use that matrix to create a testing scheme
+train_proportion = 0.75
+min(rowCounts(rat_mat)) #sholdn't keep n rec. items > 1
+items_per_test_user_keep = 1
+good_threshold = 4
+
 rat_mat = as(rat_mat, "realRatingMatrix")
 SAMPLE = evaluationScheme(rat_mat, 
                           method="split", 
-                          train=.5, 
-                          given=1)
+                          train=train_proportion, 
+                          given=items_per_test_user_keep,
+                          goodRating = good_threshold,
+                          k=1)
 class(SAMPLE)
 SAMPLE
 ```
@@ -133,26 +140,39 @@ getModel(reco1)
 
 ```{r}
 # Look at the prediction
-N_PREDS = 10 # set the number of recommendations in the top-N list
-pred1 = predict(reco1, getData(SAMPLE, "known"), n=N_PREDS)
-```
-```{r}
-# lets convert to a list and inspect it
-pred1_list = as(pred1, "list")
-length(pred1_list)
-pred1_list[1]
-```
-Based on user 2 (user_id: kgRTizyE1oY441S8gn_eZw) pervious restaurant rating records, we could recommend this customer a list of 10 restauarants which someone having similar rating records like he/she also rated high star to.  
-
-```{r}
-pred1_list[2]
+N_PREDS = 5 # set the number of recommendations in the top-N list
+# Predict rating
+pred1 = predict(reco1, getData(SAMPLE, "known"), type = 'ratings', n=N_PREDS)
+pred1
 ```
 
+```{r}
+#accuracy
+test_error = calcPredictionAccuracy(pred1, 
+                       getData(SAMPLE, "unknown"), 
+                       byUser = TRUE)
+```
+```{r}
+as.data.frame(test_error)
+```
 ```{r}
 calcPredictionAccuracy(pred1, 
                        getData(SAMPLE, "unknown"), 
-                       goodRating = 5, 
+                       goodRating = good_threshold, 
                        given=N_PREDS)
 ```
-True Positive : 0.0184
-False Positive : 4.
+
+```{r}
+# predict similarity users
+pred2 = predict(reco1, getData(SAMPLE, "known"), n=N_PREDS)
+pred2
+```
+
+
+```{r}
+calcPredictionAccuracy(pred2, 
+                       getData(SAMPLE, "unknown"), 
+                       goodRating = 4, 
+                       given=N_PREDS)
+```
+
