@@ -33,6 +33,7 @@ restaurants <- read_csv("Data/canada_restaurants_ms_edits.csv")
 reviews <- read.csv("Data/canada_reviews_ms.csv")
 #checkIns <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_checkin.csv")
 checkin <- read_csv("Data/canada_checkins_ms.csv")
+viewers <- read_csv("Data/canada_viewers_rui_edits.csv")
 ```
 
 ### Business Problem   
@@ -270,9 +271,145 @@ fig11 <- reviewer %>%
 fig11
 ```
 
+For the purposes of this project, an active user is defined as someone who posts more than the average reviewer in a year. The number of users who are considered active was increasing year over year until 2018. The percent of users who were considered active in 2017 was 24% compared to 22% in 2018. Although the total number of users grew year over year, the number of reviews written on average steadily decreased from a peak of around 7 reviews per user in 2007 to just over 2 reviews in 2018. 
+```{r message=FALSE, warning=FALSE}
+mean_n = reviews %>% 
+  mutate(year = year(date)) %>%
+  group_by(year, user_id) %>%
+  count(year) %>%
+  group_by(year) %>%
+  summarise(mean = mean(n)) 
 
+# Label active y/n
+tmp = reviews %>%
+  mutate(year = year(date)) %>%
+  group_by(year, user_id) %>%
+  count(year)
+active = merge(tmp, mean_n, by = 'year')
+act_year = active %>% 
+  group_by(year) %>%
+  mutate(active = ifelse(n > mean, 1, 0)) %>%
+  mutate(active = factor(active)) 
 
+gf = act_year %>%
+  ungroup() %>%
+  group_by(year, mean, active) %>%
+  count(active)
 
+ggplot(gf,aes(x=year)) + 
+  geom_bar(aes(y=n, fill = active), stat = 'identity', alpha = 0.8) +
+  scale_fill_manual(values= c("#f8ada8", "#F15C4f")) +
+  scale_x_continuous(breaks = gf$year) + 
+  labs(y='Users',
+       title = 'Yelp active users gradually abate from 2007 to 2018') +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA)
+  ) + 
+  geom_line(aes(y = mean*4000)) + 
+  scale_y_continuous(sec.axis = sec_axis(~./4000, name = "Average num of review posted"))
+
+```
+
+Not only did active users write more reviews on average, but the length of their reviews were also longer. The average active reviewer wrote reviews containing just under 125 words compared to the average inactive user whose reviews typically contained under 95 words. 
+
+Active and inactive users gave different star ratings on average. Active users rate in a more normal way with a peak at about four stars, while inactive users are more extreme in their rating. Inactive users give 1-star and 5-star reviews more often than active users. 
+
+```{r}
+# 2018 reviewers
+active18 = act_year %>%
+  filter(year == 2018) %>%
+  ungroup() %>%
+  mutate(year_act = 2018) %>%
+  select(user_id, annual_reviews = n, active, year_act) 
+
+viewer18 = inner_join(viewers, active18, by='user_id')
+reviews18 = inner_join(viewer18, reviews, by = 'user_id')
+
+# 2017 reviewers
+active17 = act_year %>%
+  filter(year == 2017) %>%
+  ungroup() %>%
+  mutate(year_act = 2017) %>%
+  select(user_id, annual_reviews = n, active, year_act)
+viewer17 = inner_join(viewers, active17, by='user_id')
+reviews17 = inner_join(viewer17, reviews, by = 'user_id')
+
+# 2016 reviewers
+active16 = act_year %>%
+  filter(year == 2016) %>%
+  ungroup() %>%
+  mutate(year_act = 2016) %>%
+  select(user_id, annual_reviews = n, active, year_act)
+viewer16 = inner_join(viewers, active16, by='user_id')
+reviews16 = inner_join(viewer16, reviews, by = 'user_id')
+
+# 2015 reviewers
+active15 = act_year %>%
+  filter(year == 2015) %>%
+  ungroup() %>%
+  mutate(year_act = 2015) %>%
+  select(user_id, annual_reviews = n, active, year_act)
+viewer15 = inner_join(viewers, active15, by='user_id')
+reviews15 = inner_join(viewer15, reviews, by = 'user_id')
+
+## combine
+reviewers15_18 = rbind(reviews15, reviews16, reviews17, reviews18)
+
+viewers15_18 = reviewers15_18 %>%
+  mutate(year_post = year(date)) %>%
+  filter(year_post == year_act) %>%
+  select(user_id, avg_stars = average_stars.x, friends, useful, fans, 
+         yelp_since = yelping_since.x, 
+         total_reviews = review_count.x,
+         annual_reviews, active, year_act, text, date, stars, business_id)
+## active ~ star rating
+tmp_stars = viewers15_18 %>%
+  select(user_id, stars, active, year_act) %>%
+  group_by(user_id, active, year_act) %>%
+  summarise(avg_annual_stars = round(mean(stars), 2)) %>%
+  ungroup() %>%
+  mutate(active = ifelse(active==1, 'yes', 'no')) 
+
+ggplot(tmp_stars, aes(avg_annual_stars, fill = active)) + 
+  scale_fill_manual(values= c("#626262", "#F15C4f")) +
+  geom_density(alpha = 0.2) +
+  facet_wrap(.~ year_act, ncol = 2) +
+  labs(x='Annual rating in average',
+       title = 'Active reviewers rating restuarant concentrated around 4 stars') +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA)
+  )
+```
+
+```{r}
+## active ~ word.length
+viewers15_18 = viewers15_18 %>%
+  mutate(words_length = sapply(strsplit(text, " "), length))
+
+words_length = viewers15_18 %>%
+  select(user_id, words_length, active, year_act) %>%
+  group_by(year_act, active) %>%
+  summarise(avg.words = mean(words_length))
+
+ggplot(words_length, aes(x=year_act, y=avg.words)) +
+  geom_line(aes(color=active)) +  
+  scale_color_manual(values= c("#f8ada8", "#F15C4f")) +
+  labs(x='Active reviewers',
+       y='Average word length in reviews',
+       title = 'Active reviewers write longer in review') +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA)
+  ) 
+```
 
 
 
