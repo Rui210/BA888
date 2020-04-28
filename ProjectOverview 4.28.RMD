@@ -98,8 +98,13 @@ fig2 <- open %>%
    theme(axis.text = element_text(size = 13)) +
   theme(axis.title = element_text(size = 13)) 
 
-grid.arrange(fig1, fig2, nrow = 2)
+fig1
 ```
+
+```{r}
+fig2
+```
+
 
 Check-In dates ranged from 2010 to 2018. The average restaurant had 111 check-ins with a median of 57 and a maximum of 2,872 check-ins. Check-ins steadily increased year over year in the data until about 2015-2017 when they reached a peak. The first year to see a decrease in check-ins from the previous year was 2018. The check-in data does exhibit some seasonality with visits appearing to typically be higher in the summer months than winter months. 
 
@@ -123,8 +128,12 @@ fig4 <- checkin %>%
   labs(title="Distribution of Check-In Count (Fig. 4)", x = "Check-Ins")+
   theme_classic()
 
-grid.arrange(fig3, fig4, nrow = 2)
+fig3
 ```
+```{r}
+fig4
+```
+
 
 The distribution of star ratings for restaurants was left skewed. The majority of restaurants had a four-star rating with the second most common rating being 3.5 stars. The distribution of star ratings between the three cities was fairly similar, however, Calgary had a slightly higher percentage of 4+ star restaurants than Toronto and Mississauga. 
 
