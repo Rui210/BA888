@@ -238,14 +238,18 @@ restaurants %>%
 
 ```{r message=FALSE, warning=FALSE}
 ### Checkins by Star Ratings
+options(scipen= 10)
 restaurants$business_id=as.character(restaurants$business_id)
 new_table=left_join(x=checkin,y=restaurants)
 checkin_count=new_table %>% group_by(stars) %>% count(.)
 #glimpse(new_table)
 ggplot(new_table, aes(x=stars)) +
-  geom_histogram(stat="count",fill="#D32323") +
+  geom_histogram(stat="count",fill = "#F15C4F") +
   labs(title="Checkins by Star Ratings")+
-  theme_classic()
+  theme_classic() +
+  labs(title="Distribution of Star Ratings", x = "Star Rating", y = "# of Restaurants") +
+   theme(axis.text = element_text(size = 13)) +
+  theme(axis.title = element_text(size = 13)) 
 ##4 stars have the largest numbers of checkins, followed by 3.5 and 3. While 5 and 1 stars
 ##have the smallest number of checkins maybe because it is too expensive.
 ```
@@ -254,12 +258,19 @@ ggplot(new_table, aes(x=stars)) +
 ### Distribution of star ratings
 ggplot(restaurants)+
   geom_bar(aes(x=city,fill=factor(stars)),position="dodge")+
-  labs(title="Distribution of star ratings in Different City") +
+  labs(title="Distribution of star ratings by City", x = "City", y = "Number of Restaurants") +
   scale_fill_manual(values = c("#D32323", "#F15C4F", "#F8ADA8", "#FCD6D3", "#E6E6E6", "#999999", "#CCCCCC","#666666","#4D4D4D","#333333")) +
-  theme_minimal()
+  theme_minimal() +
+  theme(axis.text = element_text(size = 13)) +
+  theme(axis.title = element_text(size = 13)) 
 ##Toronto has the largest number of hotels, and Toronto also has the largest number of 5, 4 
 ##and 3 stars resutaurants.
 ```
+
+```{r}
+
+```
+
 
 ##Check-In EDA
 
