@@ -30,7 +30,7 @@ library(quanteda)
 #restaurants <- read_csv("Data/canada_restaurants_ms.csv") #missy file path
 restaurants <- read_csv("Data/canada_restaurants_ms_edits.csv")
 #reviews <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_reviews.csv") #adil file path
-reviews <- read.csv("Data/canada_reviews_ms.csv")
+reviews <- read_csv("Data/canada_reviews_ms.csv")
 #checkIns <- read_csv("/Users/Adil/Documents/RStudio/capstoneData/canada_checkin.csv")
 checkin <- read_csv("Data/canada_checkins_ms.csv")
 viewers <- read_csv("Data/canada_viewers_rui_edits.csv")
@@ -148,7 +148,7 @@ fig5
 
 
 ```{r}
-restaurants %>% 
+fig6 <- restaurants %>% 
   count(city, stars) %>% 
   group_by(city) %>% 
   mutate(percent = n / sum(n) ) %>% 
@@ -160,6 +160,7 @@ restaurants %>%
   theme_minimal() +
   theme(axis.text = element_text(size = 13)) +
   theme(axis.title = element_text(size = 13)) 
+fig6
 ```
 
 The dataset contained over 480k reviews. The mean number of reviews per restaurant was 64. The distribution of the review length is right-skewed and more than 50% of all the reviews were between 25 to 120 words. The average review length was around 130 words while the median was around 100 words. The most common bigrams found in reviews included “come back”, “ice cream” and “go back”. 
@@ -388,7 +389,7 @@ fig13 <- ggplot(tmp_stars, aes(avg_annual_stars, fill = active)) +
   geom_density(alpha = 0.2) +
   facet_wrap(.~ year_act, ncol = 2) +
   labs(x='Annual rating in average',
-       title = 'Active reviewers rating restuarant concentrated around 4 stars (Fig. 13)') +
+       title = 'Active vs. Inactive Rating Patterns (Fig. 13)') +
   theme(
     panel.grid.major = element_blank(), 
     panel.grid.minor = element_blank(),
@@ -413,7 +414,7 @@ fig14 <- ggplot(words_length, aes(x=year_act, y=avg.words)) +
   scale_color_manual(values= c("#f8ada8", "#F15C4f")) +
   labs(x='Active reviewers',
        y='Average word length in reviews',
-       title = 'Active reviewers write longer in review (Fig. 14)') +
+       title = 'Active reviewers write longer reviews (Fig. 14)') +
   theme(
     panel.grid.major = element_blank(), 
     panel.grid.minor = element_blank(),
