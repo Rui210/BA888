@@ -87,8 +87,7 @@ ggplot(user_retentionT1 ,aes(CohortGroup,CohortPeriod,fill=TotalUsers))+
   labs(title='Cohort Analysis - User Quarterly Retention',
        subtitle ='2018 new customers performed less retention than the past customers.') +
   theme(
-    legend.position = "bottom"
-  )
+    legend.position = "bottom")
 ```
 ## Review count
 ```{r}
@@ -138,8 +137,8 @@ ggplot(review_postedT2,aes(CohortPeriod,TotalReviews)) +
      scale_color_manual(name="Time group",
                        labels=c("1st quarter","2nd quarter","3rd quarter"),
                        values = c("#CB4335", "#EC7063", '#F5B7B1')) +
-     labs(title = 'Quarterly Reviews',
-          subtitle = 'Quarterly Reviews by new users trend to decrease from 2015 to 2018.',
+     labs(title = 'New User Reviews in First Three Quarters',
+          subtitle = 'First quarter reviews trend to decrease from 2015 to 2018.',
           x='Cohort period',
           y='Total reviews') +
   theme(
@@ -202,7 +201,7 @@ ggplot(review_per_personT2,aes(CohortPeriod,ReviewPerPerson)) +
      scale_color_manual(name="Time group",
                        labels=c("1st quarter","2nd quarter","3rd quarter"),
                        values = c("#707B7C", '#EB984E', "#95A5A6")) +
-     labs(title = 'Quarterly Reviews Per Person',
+     labs(title = 'Reviews Per Returned User in First Three Quarter',
           subtitle = 'Users who stay until 2nd quarter frequently reviewing during this period',
           x='Cohort period',
           y='Review per person') +
