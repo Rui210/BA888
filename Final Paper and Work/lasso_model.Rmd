@@ -1,0 +1,98 @@
+---
+title: "Lasso Model"
+author: "Adil Bin Wahab"
+date: "4/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load libraries
+```{r message=FALSE, warning=FALSE}
+library(glmnet)
+library(dplyr)
+```
+
+Find the best lambda using cross-validation
+```{r}
+set.seed(007) 
+cv.lasso <- cv.glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial")
+```
+
+Fit the final model on the training data
+```{r}
+model <- glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial",
+                lambda = cv.lasso$lambda.min)
+```
+
+
+Make predictions on the test data
+```{r}
+x.test <- model.matrix(is_open ~.,data_test)[,-1]
+probabilities <- model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+```
+
+Model accuracy
+```{r}
+observed.classes <- data_test$is_open
+mean(predicted.classes == observed.classes) * 100
+```
+
+Show plot 
+```{r}
+set.seed(007)
+cv.lasso <- cv.glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial")
+plot(cv.lasso)
+```
+
+# Final model with lambda.min
+```{r}
+lasso.model <- glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial",
+                      lambda = cv.lasso$lambda.min)
+```
+
+Make prediction on test data
+```{r}
+x.test <- model.matrix(is_open ~., data_test)[,-1]
+probabilities <- lasso.model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+```
+
+Model accuracy based on min
+```{r}
+observed.classes <- data_test$is_open
+mean(predicted.classes == observed.classes) * 100
+```
+
+# Final model with lambda.1se
+```{r}
+lasso.model <- glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial",
+                      lambda = cv.lasso$lambda.1se)
+```
+
+Make prediction on test data
+```{r}
+x.test <- model.matrix(is_open ~., data_test)[,-1]
+probabilities <- lasso.model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+```
+
+Model accuracy based on 1se
+```{r}
+observed.classes <- data_test$is_open
+mean(predicted.classes == observed.classes) * 100
+```
+
+lambda.1se model is the most accurate with 77% accuracy
+```{r}
+coef(cv.lasso, cv.lasso$lambda.1se)
+```
+
+# Interpretation:
+
+A Lasso regression model’s unique ability to perform both regularization and variable selection to enhance the prediction accuracy and interpretability seamlessly align with the goal of the study. The model’s prediction accuracy is around 77%. There are fifteen variables that correlate with the chances of whether a restaurant will stay open or not, but only a few variables appear to hold the most weight. Customers having access to a parking lot associated with the restaurant has the highest positive correlation on the chances of a restaurant staying in business. However, a restaurant that only has street parking appears to have the strongest negative correlation with staying in business. Note that this study looks at some of the most populated cities in Canada: Toronto-Mississauga, and Calgary. A customer’s inability or hassle to find parking seem to be detrimental to restaurant sales and possibly reputation. Customers may not want to deal with the headache of metered-parking street parking while trying to enjoy a meal. They may also not want to wait for a spot to open up close to the restaurant or park far from the restaurant requiring them to walk more than they may be willing to.
+
+A higher star rating and being accommodating towards kids have a relatively similar strong positive correlation with a restaurant staying in business. The importance of star rating is undeniable as more and more customers start to rely on ratings from directory service and review forum apps to decide on a restaurant. This may prove to restaurant managers and PR teams the value of investing in strategies to improve their presence on apps like Yelp. Restaurants being accommodating towards kids may be an indicator that many parents who have kids may be limited or more inclined to dine at restaurants where they do not have to worry about where to leave the kid/s if they want to go out to eat.
