@@ -176,7 +176,7 @@ viewers15_18 = reviewers15_18 %>%
   select(user_id, avg_stars = average_stars.x, friends, useful, fans, 
          yelp_since = yelping_since.x, 
          total_reviews = review_count.x,
-         annual_reviews, active, year_act, text, date, stars, business_id)
+         annual_reviews, active, year_act, text, review_id, date, stars, business_id)
 ```
 ```{r}
 ## active ~ star rating
