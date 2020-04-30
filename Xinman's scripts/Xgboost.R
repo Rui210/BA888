@@ -206,5 +206,3 @@ xgb.ggplt<-xgb.ggplot.importance(importance_matrix = imp_matrix, top_n = 27)
 xgb.ggplt+theme( text = element_text(size = 20),
                  axis.text.x = element_text(size = 15, angle = 45, hjust = 1))
 
-
-
