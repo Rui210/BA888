@@ -27,7 +27,6 @@ model <- glmnet(x_train_isOpen, y_train_isOpen, alpha = 1, family = "binomial",
                 lambda = cv.lasso$lambda.min)
 ```
 
-
 Make predictions on the test data
 ```{r}
 x.test <- model.matrix(is_open ~.,data_test)[,-1]

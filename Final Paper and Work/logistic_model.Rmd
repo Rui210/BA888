@@ -1,0 +1,42 @@
+---
+title: "Simple Logistic Regression Model"
+author: "Adil Bin Wahab"
+date: "4/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Confirm there are no missing values 
+```{r}
+sapply(data_train,function(x) sum(is.na(x)))
+sapply(data_train, function(x) length(unique(x)))
+```
+
+Fit binomial logistic regression model
+```{r}
+model <- glm(is_open ~.,family=binomial(link='logit'),data=data_train)
+```
+
+Make predictions on the test data
+```{r}
+x.test <- model.matrix(is_open ~.,data_test)[,-1]
+probabilities <- predict(model, newx = x.test, type='response')
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+```
+
+Model accuracy of 72.80%
+```{r}
+observed.classes <- data_test$is_open
+mean(predicted.classes == observed.classes) * 100
+```
+
+Logistic model diagnostics 
+```{r}
+options(scipen = 999)
+
+#summary(model)
+stargazer::stargazer(model, type='text')
+```

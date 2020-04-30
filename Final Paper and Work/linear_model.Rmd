@@ -1,0 +1,42 @@
+---
+title: "Linear Regression Model"
+author: "Adil Bin Wahab"
+date: "4/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Fit Linear Regression Model 
+```{r}
+lm.fit = lm(is_open ~ ., data = data_train)
+```
+
+Model accuracy of 74.06%
+```{r}
+xtest <- model.matrix(is_open ~.,data_test)[,-1]
+probabilities <- lm.fit %>% predict(newx = xtest)
+pred.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+obs.classes <- data_test$is_open
+
+mean(pred.classes == obs.classes) * 100
+```
+
+Linear Model Diagnostics 
+```{r}
+options(scipen = 999)
+
+lmSum <- summary(lm.fit) 
+#lmSum
+
+stargazer::stargazer(lm.fit, type="text")
+```
+
+# Positive significant variables:
+stars - review_count - WiFi - park_lot - Delivery - summer
+
+# Negative significant variables:
+WiFi - full_bar - beer_wine - BikeParking - park_street - spring - reservations
