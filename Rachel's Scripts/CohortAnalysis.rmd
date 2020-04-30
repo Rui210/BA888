@@ -67,7 +67,6 @@ user_retentionT1 <- user_retentionT %>%
        value.name = 'TotalUsers')
 ```
 
-
 ```{r}
 library("Cairo")
 library('sysfonts')
@@ -77,7 +76,7 @@ library("showtext")
 ggplot(user_retentionT1 ,aes(CohortGroup,CohortPeriod,fill=TotalUsers))+
   geom_tile(colour='white') +
   geom_text(aes(label = ifelse(TotalUsers !=0,paste0(round(100*TotalUsers,2),'%'),'')),
-            colour = 'black', size = 2) +
+            colour = 'black', size = 2.3) +
   scale_fill_gradient2(limits=c(0,.8),
                        low="#F4D03F", 
                        mid ='#FADBD8', 
@@ -86,7 +85,9 @@ ggplot(user_retentionT1 ,aes(CohortGroup,CohortPeriod,fill=TotalUsers))+
   scale_y_discrete(limits = rev(unique(user_retentionT1$CohortPeriod))) +
   scale_x_discrete(position = "top") +
   labs(title='Cohort Analysis - User Quarterly Retention',
-       subtitle ='2018 new customers performed less retention than the past customers.')
+       subtitle ='2018 new customers performed less retention than the past customers.') +
+  theme(
+    legend.position = "bottom")
 ```
 ## Review count
 ```{r}
@@ -116,7 +117,7 @@ t=max(review_postedT1$TotalReviews)
 ggplot(review_postedT1 ,aes(CohortGroup,CohortPeriod,fill=TotalReviews))+
   geom_tile(colour='white') +
   geom_text(aes(label = ifelse(TotalReviews !=0,TotalReviews,"")),
-            colour = 'black', size = 2) +
+            colour = 'black', size = 2.7) +
   scale_fill_gradient2(limits=c(0,t),
                        low="#F4D03F", 
                        mid ='#FADBD8', 
@@ -127,7 +128,32 @@ ggplot(review_postedT1 ,aes(CohortGroup,CohortPeriod,fill=TotalReviews))+
   labs(title='Cohort Analysis - Quarterly Reviews',
        subtitle = 'Reviews by new users trend to decrease from 2015 to 2018.')
 ```
-## Review pre person
+```{r}
+# Cohort Curve
+review_postedT2 = review_postedT1 %>%
+  filter(CohortGroup == 'V1'|CohortGroup == 'V2'|CohortGroup == 'V3')
+ggplot(review_postedT2,aes(CohortPeriod,TotalReviews)) +
+     geom_line(aes(group = CohortGroup, colour = CohortGroup))+
+     scale_color_manual(name="Time group",
+                       labels=c("1st quarter","2nd quarter","3rd quarter"),
+                       values = c("#CB4335", "#EC7063", '#F5B7B1')) +
+     labs(title = 'New User Reviews in First Three Quarters',
+          subtitle = 'First quarter reviews trend to decrease from 2015 to 2018.',
+          x='Cohort period',
+          y='Total reviews') +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom",
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA)
+  )
+  
+```
+
+
+# Review pre person
 ```{r}
 CA_reviewprp_size = CohortAnalysis %>%
   filter(CohortPeriod == 1) %>%
@@ -155,7 +181,7 @@ t1=max(review_per_personT1$ReviewPerPerson)
 ggplot(review_per_personT1,aes(CohortGroup,CohortPeriod,fill=ReviewPerPerson))+
   geom_tile(colour='white') +
   geom_text(aes(label = ifelse(ReviewPerPerson !=0,round(ReviewPerPerson,2),"")),
-            colour = 'black', size = 2) +
+            colour = 'black', size = 3) +
   scale_fill_gradient2(limits=c(1,t1),
                        low="#F8F9F9", 
                        mid ='#CCD1D1', 
@@ -166,9 +192,32 @@ ggplot(review_per_personT1,aes(CohortGroup,CohortPeriod,fill=ReviewPerPerson))+
   labs(title='Cohort Analysis - Quarterly Reviews Per Person',
        subtitle = "Users who stay until 2nd quarter frequently reviewing during this period.")
 ```
+```{r}
+# Cohort Curve
+review_per_personT2 = review_per_personT1 %>%
+  filter(CohortGroup == 'V1'|CohortGroup == 'V2'|CohortGroup == 'V3')
+ggplot(review_per_personT2,aes(CohortPeriod,ReviewPerPerson)) +
+     geom_line(aes(group = CohortGroup, colour = CohortGroup))+
+     scale_color_manual(name="Time group",
+                       labels=c("1st quarter","2nd quarter","3rd quarter"),
+                       values = c("#707B7C", '#EB984E', "#95A5A6")) +
+     labs(title = 'Reviews Per Returned User in First Three Quarter',
+          subtitle = 'Users who stay until 2nd quarter frequently reviewing during this period',
+          x='Cohort period',
+          y='Review per person') +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom",
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA)
+  )
+```
+
 **Takeaway**
 *User Rentention* 
   - During 2015 to 2017, over 40% new user would return to review restaurant on Yelp within two quarters, over 30% users keep reviewing on yelp after one year. After two years, the retention rate went to 20% or less. 
   - However, user retention in 2018 4th quarter drop a lot. Around 15% users come back to Yelp review in this 4th quater only, even the new users who start to use Yelp within one year. (Could it due to data loss?)   
-*User Review posted* New users came in 2015 and 2016 are more likely contributed to Yelp content in first quarter than new users came in after that.
+*User Review posted* New users came in 2015 and 2016 are more likely contributed to Yelp content in first quarter than new users came in after 2016.
 *Average review posting* The second quarter is the core user retention period. Users not only keep relativly high rentetion rate, but also likely to post more reviews in this period.
