@@ -423,7 +423,4 @@ fig14 <- ggplot(words_length, aes(x=year_act, y=avg.words)) +
   ) 
 fig14
 ```
-dd
-
-
 
