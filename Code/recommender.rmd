@@ -1,0 +1,318 @@
+---
+title: "Recommender"
+author: "Rui Xu"
+date: "4/16/2020"
+output: pdf_document
+---
+Recommendation for users is an engagement approach which not only personalized users'favor and encouraged customers to leave reviews for their likes. A User-Based Collaborative Filtering model was implemented as our recommender algorithm to predict both new restaurants' star rating and a recommended list for sample individuals. It works as users clustering based on similar rating profiles. If two users have same star ratings on two or more restaurants, the algorithm will recommend new restaurants that are liked by one user also to the other. 
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(reshape2)
+library(zoo)
+options(scipen=999)
+
+library(recommenderlab) # for recommender
+
+reviews = read_csv('~/Desktop/Capstone/canada_reviews_ms.csv')
+restaurant = read.csv('~/Desktop/Capstone/canada_restaurants_ms_edits.csv')
+```
+# Sample data selection
+```{r}
+# Pick restaurants into recommender sample
+restaurant %>%
+  filter(is_open == 1) %>%
+  group_by(city) %>%
+  summarise(num_rest = sum(n()),
+            num_review = sum(review_count))
+```
+I pick open restaurants in Mississauga where small number of business exists, in case further technique problem when manipulate data structure.
+```{r message=FALSE, warning=FALSE}
+RecomRest = restaurant %>%
+  filter(is_open == 1,
+         city == 'Mississauga') %>%
+  select(business_id, rest_name = name) %>%
+  inner_join(.,reviews, by='business_id')
+```
+
+```{r}
+# Inspect whether reviewers who post less would have a different rating scheme
+ggplot(RecomRest, aes(y=average_stars,x=review_count)) +
+  geom_point(size=0.8) +
+  xlim(c(0,50))
+```
+```{r}
+# Inspect reviewers who post most
+ggplot(RecomRest, aes(y=average_stars,x=review_count)) +
+  geom_point(size=0.8) +
+  xlim(c(600,5000))
+```
+# Pre-process Data
+```{r}
+# reassign unique user_id and unique business_id
+userId = RecomRest %>%
+  select(user_id) %>%
+  unique() %>%
+  mutate(userIdR = row_number())
+bussId = RecomRest %>%
+  select(business_id) %>%
+  unique() %>%
+  mutate(bussIdR = row_number())
+```
+```{r}
+# keep varibles that used for recommendation system: users id, star rating, business id
+tmp = inner_join(userId, RecomRest, 'user_id')
+RecomData = inner_join(tmp, bussId, 'business_id')
+RecomData1 = RecomData %>%
+  select(userIdR,stars,bussIdR,date)
+```
+```{r}
+# adjust variable type to duble
+RecomData1$userIdR = as.character(RecomData$userIdR)
+RecomData1$userIdR = as.numeric(RecomData1$userIdR)
+RecomData1$bussIdR = as.character(RecomData1$bussIdR)
+RecomData1$bussIdR = as.numeric(RecomData1$bussIdR)
+RecomData1$date = as.numeric(as.POSIXct(RecomData1$date))
+```
+```{r}
+RecomData1
+```
+```{r message=FALSE, warning=FALSE}
+# write out structured sample data
+# in case technique problem for future steps.
+write_csv(RecomData1, 'RecomData.csv')
+df = read_csv('RecomData.csv')
+```
+```{r}
+# inspect sample data 
+glimpse(df)
+```
+Exist one userId rating one bussId multiple times, we select the least date one as final stars.
+```{r}
+df1 = df%>%
+  group_by(userIdR,bussIdR) %>%
+  filter(row_number() == 1) %>%
+  select(-date)
+```
+```{r}
+# put the dataset into a wide format
+ratingR = df1 %>%
+  pivot_wider(names_from = bussIdR,
+              values_from = stars,
+              names_prefix = 'r')
+
+ratingR[1:5, 1:5]
+```
+```{r}
+dim(ratingR)
+```
+**Find Out** We have 13,807 unique users rated the 680 unique restaurants.
+
+```{r}
+## convert the dataframe into a matrix to retain user ids
+rownames(ratingR) =  ratingR$userIdR
+ratingR$userIdR = NULL
+rat_mat = as.matrix(ratingR)
+rownames(rat_mat)[1:5]
+colnames(rat_mat)[1:5]
+```
+```{r}
+## convert to realRatingMatrix from package
+## use that matrix to create a testing scheme
+train_proportion = 0.75
+items_per_test_user_keep = 1
+good_threshold = 4
+
+rat_mat = as(rat_mat, "realRatingMatrix")
+SAMPLE = evaluationScheme(rat_mat, 
+                          method="split", 
+                          train=train_proportion, 
+                          given=items_per_test_user_keep,
+                          goodRating = good_threshold,
+                          k=1)
+class(SAMPLE)
+SAMPLE
+```
+# Model fitting
+**Attention**: Data spliting suffled if you rerun the fitting funtion, it will resulted slightly different prediction outcome and accuracy show in the following chunks.
+```{r}
+reco1 = Recommender(getData(SAMPLE, "train"), 
+                    method="UBCF", # User-Based Collaborative filtering - utilizes user similarities
+                    param = list(normalize = NULL, # do not normalize the ratings
+                                 method = "Cosine")) # use cosine similiarty on the ratings
+
+class(reco1) 
+reco1 # learned using 10355 users.
+getModel(reco1)
+```
+# Prediction 
+1.predict star rating
+```{r}
+# Look at the prediction
+N_PREDS = 10 # set the number of recommendations in the top-N list
+# Predict rating
+pred1 = predict(reco1, getData(SAMPLE, "known"), type = 'ratings', n=N_PREDS)
+pred1
+```
+## Star rating accuracy
+```{r}
+test_error = calcPredictionAccuracy(pred1, 
+                       getData(SAMPLE, "unknown"), 
+                       byUser = TRUE)
+```
+```{r}
+as.data.frame(test_error)
+```
+```{r}
+calcPredictionAccuracy(pred1, 
+                       getData(SAMPLE, "unknown"), 
+                       goodRating = good_threshold, 
+                       given=N_PREDS)
+```
+2. predict similarity users, give 10-restaurant lists.
+```{r}
+pred2 = predict(reco1, getData(SAMPLE, "known"), n=N_PREDS)
+pred2
+```
+Look at the first two users' recommendation restaurants
+```{r}
+pred2_list = as(pred2, "list")
+length(pred2_list)
+pred2_list[1]
+pred2_list[2]
+```
+## Restaurant prediction accuracy
+```{r}
+calcPredictionAccuracy(pred2, 
+                       getData(SAMPLE, "unknown"), 
+                       goodRating = 4, 
+                       given=N_PREDS)
+```
+**Find Out** We have high accuracy score due to the large weighted ture nagetive value. while the result show low precision and recall. It means our prediction is less relevant to the whole test group. We need to decrese noise, filter users who post at least 5 reviews.
+
+# Remove Noise - filter user's posting >= 5
+```{r}
+# set filter
+filter1 = df1 %>%
+  ungroup() %>%
+  select(userIdR) %>%
+  count(userIdR) %>%
+  filter(n>=5)
+# keep the userId on filter list
+df2 = inner_join(df1, filter1, 'userIdR')
+df2 = df2 %>%
+  select(-n)
+# repeat recommender data pre-processing
+ratingR2 = df2 %>%
+  pivot_wider(names_from = bussIdR,
+              values_from = stars,
+              names_prefix = 'r')
+rownames(ratingR2) =  ratingR2$userIdR
+ratingR2$userIdR = NULL
+rat_mat2 = as.matrix(ratingR2)
+rat_mat2 = as(rat_mat2, "realRatingMatrix")
+SAMPLE2 = evaluationScheme(rat_mat2, 
+                          method="split", 
+                          train=train_proportion, 
+                          given=items_per_test_user_keep,
+                          goodRating = good_threshold,
+                          k=1)
+class(SAMPLE2)
+SAMPLE2
+```
+# Model fitting
+**Attention**: Data spliting suffled if you rerun the fitting funtion, it will resulted slightly different prediction outcome and accuracy show in the following chunks.
+```{r}
+reco12 = Recommender(getData(SAMPLE2, "train"), 
+                    method="UBCF", # User-Based Collaborative filtering - utilizes user similarities
+                    param = list(normalize = NULL, # do not normalize the ratings
+                                 method = "Cosine")) # use cosine similiarty on the ratings
+```
+```{r}
+class(reco12) 
+reco12
+```
+# Prediction
+```{r}
+pred2_5 = predict(reco12, getData(SAMPLE2, "known"), n=N_PREDS)
+pred2_5
+```
+Look at the first two users' recommendation restaurants.
+```{r}
+pred2_5_list = as(pred2_5, "list")
+length(pred2_5_list)
+pred2_5_list[1]
+pred2_5_list[2]
+```
+## Accuracy
+```{r}
+calcPredictionAccuracy(pred2_5, 
+                       getData(SAMPLE2, "unknown"), 
+                       goodRating = 4, 
+                       given=N_PREDS)
+```
+
+# Remove Noise - filter user's posting >= 10
+```{r}
+# filter users who review at least 10 restaurants
+filter2 = df1 %>%
+  ungroup() %>%
+  select(userIdR) %>%
+  count(userIdR) %>%
+  filter(n>=10)
+# keep the userId on filter list
+df3 = inner_join(df1, filter2, 'userIdR')
+df3 = df3 %>%
+  select(-n)
+# repeat recommender data pre-processing
+ratingR3 = df3 %>%
+  pivot_wider(names_from = bussIdR,
+              values_from = stars,
+              names_prefix = 'r')
+rownames(ratingR3) =  ratingR3$userIdR
+ratingR3$userIdR = NULL
+rat_mat3 = as.matrix(ratingR3)
+
+rat_mat3 = as(rat_mat3, "realRatingMatrix")
+SAMPLE3 = evaluationScheme(rat_mat3, 
+                          method="split", 
+                          train=train_proportion, 
+                          given=items_per_test_user_keep,
+                          goodRating = good_threshold,
+                          k=1)
+class(SAMPLE3)
+SAMPLE3
+```
+# Model fitting
+**Attention**: Data spliting suffled if you rerun the fitting funtion, it will resulted slightly different prediction outcome and accuracy show in the following chunks.
+```{r}
+reco13 = Recommender(getData(SAMPLE3, "train"), 
+                    method="UBCF", # User-Based Collaborative filtering - utilizes user similarities
+                    param = list(normalize = NULL, # do not normalize the ratings
+                                 method = "Cosine")) # use cosine similiarty on the ratings
+```
+```{r}
+class(reco13) 
+reco13
+```
+# Prediction
+```{r}
+pred2_10 = predict(reco13, getData(SAMPLE3, "known"), n=N_PREDS)
+pred2_10
+```
+Look at the first two users' recommendation restaurants.
+```{r}
+pred2_10_list = as(pred2_10, "list")
+length(pred2_10_list)
+pred2_10_list[1]
+pred2_10_list[2]
+```
+## Accuracy
+```{r}
+calcPredictionAccuracy(pred2_10, 
+                       getData(SAMPLE3, "unknown"), 
+                       goodRating = 4, 
+                       given=N_PREDS)
+```
+**Find Out** The final sample data is a 490 * 670 matrix. Recommendation results give every observation a 10-restaurant list in which algorithm detected as the items the user would like. We estimated the prediction accuracy for 117 users in the test group. We run the model several times and the best accuracy score is 96.70%, which means 96.70% of prediction is corrected. While only 7.9% of prediction results are relevant to the actual user rating profile. Having few true positive predictions in our data caused the low relevant prediction. 
