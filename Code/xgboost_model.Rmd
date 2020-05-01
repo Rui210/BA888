@@ -222,7 +222,8 @@ imp_matrix <- xgb.importance(colnames(data_train$is_open), model = xgb)
 xgb.ggplt<-xgb.ggplot.importance(importance_matrix = imp_matrix, top_n = 27)
 # increase the font size for x and y axis
 xgb.ggplt+theme( text = element_text(size = 20),
-                 axis.text.x = element_text(size = 15, angle = 45, hjust = 1))
+                 axis.text.x = element_text(size = 15, angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#F8ADA8","#F15C4F"))
 ```
 
 # Interpretation:
