@@ -6,6 +6,8 @@ Yelp’s terabytes of historical data on restaurants’ reviews, check-ins, and 
 
 How can a restaurant leverage information on Yelp to increase their chances of attaining their business goals and preventing permanent closure? What customer characteristics are reflected in reviews and ratings?
 
+***Please refer to the Project Summary for a detailed report of the project.***
+
 ## Prerequisites
 
 ### Original Dataset
