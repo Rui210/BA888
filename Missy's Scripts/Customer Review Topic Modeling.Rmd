@@ -1,0 +1,27 @@
+---
+title: "Topic Modeling"
+author: "Melissa Putur"
+date: "4/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Loading the Libraries:
+```{r message=FALSE, warning=FALSE}
+library(sentimentr)
+library(topicmodels)
+library(tidyverse)
+library(quanteda)
+library(topicmodels)
+library(tidytext)
+library(factoextra)
+library(wordcloud)
+library(quanteda)
+library(tidyverse)
+library(dplyr)
+```
+
