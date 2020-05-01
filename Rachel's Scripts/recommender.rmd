@@ -59,7 +59,12 @@ bussId = RecomRest %>%
 ```{r}
 # keep varibles that used for recommendation system: users id, star rating, business id
 tmp = inner_join(userId, RecomRest, 'user_id')
-RecomData = inner_join(tmp, bussId, 'business_id')
+tmp1 = tmp %>%
+  count(userIdR) %>%
+  filter(n>=10)
+tmp2 = inner_join(userId, tmp1, 'userIdR')
+tmp3 = inner_join(tmp2, RecomRest, 'user_id')
+RecomData = inner_join(tmp3, bussId, 'business_id')
 RecomData1 = RecomData %>%
   select(userIdR,stars,bussIdR,date)
 RecomData1
@@ -112,7 +117,6 @@ colnames(rat_mat)[1:5]
 ## convert to realRatingMatrix from package
 ## use that matrix to create a testing scheme
 train_proportion = 0.75
-min(rowCounts(rat_mat)) #sholdn't keep n rec. items > 1
 items_per_test_user_keep = 1
 good_threshold = 4
 
@@ -140,7 +144,7 @@ getModel(reco1)
 
 ```{r}
 # Look at the prediction
-N_PREDS = 5 # set the number of recommendations in the top-N list
+N_PREDS = 10 # set the number of recommendations in the top-N list
 # Predict rating
 pred1 = predict(reco1, getData(SAMPLE, "known"), type = 'ratings', n=N_PREDS)
 pred1
