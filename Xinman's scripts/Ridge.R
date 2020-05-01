@@ -1,5 +1,5 @@
 options(stringsAsFactors = FALSE)
-options(digits=3)
+options(digits=2)
 library(Ckmeans.1d.dp)
 library(xgboost)
 library(cluster)
@@ -198,7 +198,7 @@ ac = table(y_test_isOpen, y_predicted)
 yardstick::accuracy(ac)
 
 # coefficient
-coef(fit_ridge)
+coef(fit)
 
 
 #### positive variable
