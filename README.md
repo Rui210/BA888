@@ -46,6 +46,7 @@ In 2018, the review amount drops. However, it could due to no data on reviews in
 
 ### User Activity
 **Active Users Definition:** users whose total review in one particular year is more than the average reviews posted by all Yelp users in that year. <br>
+<br>
 From users who at least posted one review, in 2018, 22% of users were active compared to 24% in 2017.
 Inactive users wrote less, but were more extreme in their ratings, 'bad to worst and good to best'.
 Active users wrote longer reviews and gave more 'mild' star ratings to restaurants. 
