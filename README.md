@@ -1,4 +1,4 @@
-# Can Yelp Reviews Save the Restaurant Industry?
+# Can Yelp Reviews Bridge the Gap Between Consumer Preferences and Industry Priorities? 
 
 Finding restaurants through directory services apps and review forum apps have become a crucial part of business discovery. It has changed the way restaurants of different tiers attain brand loyalty and market themselves.   
 
