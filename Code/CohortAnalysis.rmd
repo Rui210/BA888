@@ -1,0 +1,242 @@
+---
+title: "CohortAnalysis.rmd"
+author: "Rui Xu"
+date: "4/15/2020"
+output: html_document
+---
+# Cohort Analysis
+Cohort Analysis on Yelp users helps us to inspect whether Yelp is a vibrant local community with active reviewers contributing to high-quality content. It determined whether our review research could significantly represent the opinion held by the local customer population, which is the true reference for local business development.  
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(reshape2)
+library(zoo)
+options(scipen=999)
+reviews = read_csv('~/Desktop/Capstone/canada_reviews_ms.csv')
+```
+## Data pre-processing
+```{r}
+# use reviewers joined Yelp after 2015
+data = reviews %>%
+  mutate(year = year(yelping_since),
+         user_id = factor(user_id)) %>%
+  filter(year >= 2015) %>%
+  select(user_id, date, yelping_since, review_id)
+```
+```{r}
+#customer review period on quarterly basis.
+data$review_yr_q = format(as.yearqtr(data$date,"%Y-%m-%d"), format="%y/0%q")
+# #user create account period
+data$CohortGroup = format(as.yearqtr(data$yelping_since, '%Y-%m-%d'), format="%y/0%q") 
+```
+```{r}
+CohortAnalysis = data %>% 
+  group_by(CohortGroup,review_yr_q) %>%   
+            #calculate unique user num by each review period and yelp start period.
+  summarize(user_id  = n_distinct(user_id),
+            #calculate total review num by each review period and yelp start period.
+            review_id = n_distinct(review_id)) %>% 
+  rename(TotalUsers= user_id,
+         Totalreviews = review_id) %>%
+            #calculate review per person num by each review period and yelp start period.
+  mutate(ReviewPerPerson = Totalreviews/TotalUsers) %>%
+            #assign group number to each review period
+  arrange(CohortGroup,review_yr_q) %>% 
+  ungroup() %>%
+  group_by(CohortGroup) %>%               
+  mutate(CohortPeriod =row_number())
+
+```
+
+## User retention
+```{r}
+# show the number of users stay in every time period and group
+CA_user_group_size = CohortAnalysis %>%
+  filter(CohortPeriod == 1) %>%
+  select(CohortGroup,review_yr_q,TotalUsers) 
+
+# convert long table to wide table.
+user_retention = CohortAnalysis %>% 
+  select(CohortGroup,CohortPeriod,TotalUsers) %>%
+  spread(CohortGroup,TotalUsers) 
+
+# Calculate the percentage of user num to each group's total num.
+user_retention[,-1] <- user_retention[,-1] %>% 
+  t() %>%
+  `/`(CA_user_group_size$TotalUsers) %>% t() %>% as.data.frame() 
+```
+```{r}
+user_retentionT <- t(user_retention) %>% 
+  .[2:nrow(.),]  %>% 
+  as.data.frame()
+
+user_retentionT$CohortPeriod <- row.names(user_retentionT)
+row.names(user_retentionT) <- NULL
+user_retentionT <- user_retentionT[,c(17,1:16)]
+user_retentionT1 <- user_retentionT %>% 
+  melt(id.vars = 'CohortPeriod',
+       variable.name = 'CohortGroup',
+       value.name = 'TotalUsers')
+```
+
+```{r}
+# Visualization
+library("Cairo")
+library('sysfonts')
+library('showtextdb')
+library("showtext")
+
+ggplot(user_retentionT1 ,aes(CohortGroup,CohortPeriod,fill=TotalUsers))+
+  geom_tile(colour='white') +
+  geom_text(aes(label = ifelse(TotalUsers !=0,paste0(round(100*TotalUsers,2),'%'),'')),
+            colour = 'black', size = 2.3) +
+  scale_fill_gradient2(limits=c(0,.8),
+                       low="#F4D03F", 
+                       mid ='#FADBD8', 
+                       high="#CB4335",
+                       midpoint = median(user_retentionT1$TotalUsers, na.rm =TRUE),na.value = "grey90") +
+  scale_y_discrete(limits = rev(unique(user_retentionT1$CohortPeriod))) +
+  scale_x_discrete(position = "top") +
+  labs(title='Cohort Analysis - User Quarterly Retention',
+       subtitle ='2018 new customers performed less retention than the past customers.') +
+  theme(
+    legend.position = "bottom")
+```
+## Review posting
+```{r}
+# show the number of total review in every quarter period and group
+CA_review_group_size = CohortAnalysis %>%
+  filter(CohortPeriod == 1) %>%
+  select(CohortGroup,review_yr_q,Totalreviews) 
+
+# convert long table to wide table.
+review_posted = CohortAnalysis %>% 
+  select(CohortGroup,CohortPeriod,Totalreviews) %>%
+  spread(CohortGroup,Totalreviews) 
+
+review_postedT = t(review_posted) %>% 
+  .[2:nrow(.),]  %>% 
+  as.data.frame()
+
+# reshape wide table, then turn back to long to do heat map.
+review_postedT$CohortPeriod <- row.names(review_postedT) 
+row.names(review_postedT) <- NULL
+review_postedT <- review_postedT[,c(17,1:16)] 
+review_postedT1 <- review_postedT %>% 
+  melt(id.vars = 'CohortPeriod',
+       variable.name = 'CohortGroup',
+       value.name = 'TotalReviews')
+```
+
+```{r}
+# Visualization
+t=max(review_postedT1$TotalReviews)
+ggplot(review_postedT1 ,aes(CohortGroup,CohortPeriod,fill=TotalReviews))+
+  geom_tile(colour='white') +
+  geom_text(aes(label = ifelse(TotalReviews !=0,TotalReviews,"")),
+            colour = 'black', size = 2.7) +
+  scale_fill_gradient2(limits=c(0,t),
+                       low="#F4D03F", 
+                       mid ='#FADBD8', 
+                       high="#CB4335",
+                       midpoint = median(review_postedT1$TotalReviews, na.rm =TRUE),na.value = "grey90") +
+  scale_y_discrete(limits = rev(unique(review_postedT1$CohortPeriod))) +
+  scale_x_discrete(position = "top") +
+  labs(title='Cohort Analysis - Quarterly Reviews',
+       subtitle = 'Reviews by new users trend to decrease from 2015 to 2018.')
+```
+```{r}
+# Draw Cohort Curve for the first three cohort groups
+review_postedT2 = review_postedT1 %>%
+  filter(CohortGroup == 'V1'|CohortGroup == 'V2'|CohortGroup == 'V3')
+ggplot(review_postedT2,aes(CohortPeriod,TotalReviews)) +
+     geom_line(aes(group = CohortGroup, colour = CohortGroup))+
+     scale_color_manual(name="Time group",
+                       labels=c("1st quarter","2nd quarter","3rd quarter"),
+                       values = c("#CB4335", "#EC7063", '#F5B7B1')) +
+     labs(title = 'New User Reviews in First Three Quarters',
+          subtitle = 'First quarter reviews trend to decrease from 2015 to 2018.',
+          x='Cohort period',
+          y='Total reviews') +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom",
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA)
+  )
+  
+```
+
+## Review pre person
+```{r}
+# show the number of review per person in every quarter period and group
+CA_reviewprp_size = CohortAnalysis %>%
+  filter(CohortPeriod == 1) %>%
+  select(CohortGroup,review_yr_q,ReviewPerPerson) 
+
+# convert long table to wide table.
+review_per_person = CohortAnalysis %>% 
+  select(CohortGroup,CohortPeriod,ReviewPerPerson) %>%
+  spread(CohortGroup,ReviewPerPerson) 
+
+review_per_personT = t(review_per_person) %>% 
+  .[2:nrow(.),]  %>% 
+  as.data.frame()
+
+# reshape wide table, then turn back to long to do heat map.
+review_per_personT$CohortPeriod <- row.names(review_per_personT) 
+row.names(review_per_personT) <- NULL
+review_per_personT = review_per_personT[,c(17,1:16)] 
+review_per_personT1 <- review_per_personT %>% 
+  melt(id.vars = 'CohortPeriod',
+       variable.name = 'CohortGroup',
+       value.name = 'ReviewPerPerson')
+```
+
+```{r}
+#Visualization
+t1=max(review_per_personT1$ReviewPerPerson)
+ggplot(review_per_personT1,aes(CohortGroup,CohortPeriod,fill=ReviewPerPerson))+
+  geom_tile(colour='white') +
+  geom_text(aes(label = ifelse(ReviewPerPerson !=0,round(ReviewPerPerson,2),"")),
+            colour = 'black', size = 3) +
+  scale_fill_gradient2(limits=c(1,t1),
+                       low="#F8F9F9", 
+                       mid ='#CCD1D1', 
+                       high="#34495E",
+                       midpoint = median(review_per_personT1$ReviewPerPerson, na.rm =TRUE),na.value = "grey90") +
+  scale_y_discrete(limits = rev(unique(review_per_personT1$CohortPeriod))) +
+  scale_x_discrete(position = "top") +
+  labs(title='Cohort Analysis - Quarterly Reviews Per Person',
+       subtitle = "Users who stay until 2nd quarter frequently reviewing during this period.")
+```
+```{r}
+# Draw Cohort Curve for the first three cohort groups
+review_per_personT2 = review_per_personT1 %>%
+  filter(CohortGroup == 'V1'|CohortGroup == 'V2'|CohortGroup == 'V3')
+ggplot(review_per_personT2,aes(CohortPeriod,ReviewPerPerson)) +
+     geom_line(aes(group = CohortGroup, colour = CohortGroup))+
+     scale_color_manual(name="Time group",
+                       labels=c("1st quarter","2nd quarter","3rd quarter"),
+                       values = c("#707B7C", '#EB984E', "#95A5A6")) +
+     labs(title = 'Reviews Per Returned User in First Three Quarter',
+          subtitle = 'Users who stay until 2nd quarter frequently reviewing during this period',
+          x='Cohort period',
+          y='Review per person') +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom",
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA)
+  )
+```
+**Takeaway**
+*User Rentention* 
+  - During 2015 to 2017, over 40% new user would return to review restaurant on Yelp within two quarters, over 30% users keep reviewing on yelp after one year. After two years, the retention rate went to 20% or less. 
+  - However, user retention in 2018 4th quarter drop a lot. Around 15% users come back to Yelp review in this 4th quater only, even the new users who start to use Yelp within one year. (Could it due to data loss?)   
+*User Review posted* New users came in 2015 and 2016 are more likely contributed to Yelp content in first quarter than new users came in after 2016.
+*Average review posting* The second quarter is the core user retention period. Users not only keep relativly high rentetion rate, but also likely to post more reviews in this period.
