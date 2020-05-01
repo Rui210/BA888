@@ -1,7 +1,7 @@
 ---
-title: "Forward Stepwise Regression"
+title: "Random Forest"
 author: "Jiao Sun"
-date: "4/30/2020"
+date: "5/1/2020"
 output: pdf_document
 ---
 
@@ -9,7 +9,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r include=FALSE}
 library(tidyverse)
 library(zoo)
 library(DescTools)
@@ -190,93 +190,39 @@ y_train_isOpen <- data_train$is_open
 y_test_isOpen <- data_test$is_open
 ```
 
-Forward Stepwise Regression
+Random Forest
 ```{r}
-data_test[is.na(data_test)] = 0
-skimr::skim(data_test)
-skimr::skim(data_train)
+xnames_rf=colnames(ml_df)
+xnames_rf = xnames_rf[!xnames_rf %in% c("is_open", "review_count")]
 
-xnames=colnames(ml_df)
-xnames = xnames[!xnames %in% "is_open"]
-fit_fw <- lm(is_open ~ 1, data = data_train)
-yhat_train <- predict(fit_fw, data_train)
-mse_train <- mean((data_train$is_open - yhat_train)^2)
-yhat_test <- predict(fit_fw, data_test)
-mse_test <- mean((data_test$is_open - yhat_test)^2)
-
-log_fw <-
-  tibble(
-    xname = "xname",
-    model = paste0(deparse(fit_fw$call), collapse = ""),
-    mse_train = mse_train,
-    mse_test = mse_test
-  )
-
-xnamesfw <- xnames
-
-while (length(xnamesfw) > 0) {
-  best_mse_train <- NA
-  best_mse_test <- NA
-  best_fit_fw <- NA
-  best_xname <- NA
-  for (xname in xnamesfw) {
-    fit_fw_tmp <- update(fit_fw, as.formula(paste0(". ~ . + ", xname)))
-    yhat_train_tmp <- predict(fit_fw_tmp, data_train)
-    mse_train_tmp <- mean((data_train$is_open - yhat_train_tmp) ^ 2)
-    yhat_test_tmp <- predict(fit_fw_tmp, data_test)
-    mse_test_tmp <- mean((data_test$is_open - yhat_test_tmp) ^ 2)
-    if (is.na(best_mse_test) | mse_test_tmp < best_mse_test) {
-      best_xname <- xname
-      best_fit_fw <- fit_fw_tmp
-      best_mse_train <- mse_train_tmp
-      best_mse_test <- mse_test_tmp
-    }
-  }
-  log_fw <- log_fw %>% add_row(
-    xname = best_xname,
-    model = paste0(deparse(best_fit_fw$call), collapse = ""),
-    mse_train = best_mse_train,
-    mse_test = best_mse_test )
-  fit_fw <- best_fit_fw
-  xnamesfw <- xnamesfw[xnamesfw!=best_xname]
+lf <- "is_open ~ price_range"
+for (i in 2:length(xnames_rf)) {
+  as.character(xnames_rf[i])
+  lf <- paste(lf, "+", xnames_rf[i], sep = " ")
 }
+f <- as.formula(lf)
+x_train <- model.matrix(f,data_train)[ ,-1]
+y_train <- data_train$is_open
+x_test <- model.matrix(f,data_test)[ , -1]
+y_test <- data_test[ ,"is_open"]
 
-log_fw
+x_train_isOpen <- model.matrix(formula_isOpen, data_train)[, -1]
+x_test_isOpen <- model.matrix(formula_isOpen, data_test)[, -1]
 
-ggplot(log_fw, aes(seq_along(xname), mse_test)) +
-  geom_point() +
-  geom_line() +
-  geom_point(aes(y=mse_train), color="blue") +
-  geom_line(aes(y=mse_train), color="blue") +
-  scale_x_continuous("Variables", labels = log_fw$xname, breaks = seq_along(log_fw$xname)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Forward Selection Train MSE and Test MSE") +
-  ylab("MSE")
+y_train_isOpen <- data_train$is_open
+y_test_isOpen <- data_test$is_open
 
-## From the graph, the mse of train data is not very different from the mse of test. The blue line is mse for train dataset, the black line is mse for test dataset.
-## When model only have intercept, it had the highest mse, with the addition of variable one by one, 
-## the mse gradually decreases until the mse of test reaches the minimum when it is added to about 22 variable.
+fit_rf <- randomForest(f,
+                       data_train,
+                       ntree=500,
+                       do.trace=F)
 
-## Minimum test MSE for forward selection:
-log_fw[which.min(log_fw$mse_test),]$mse_test
-## The full model for forward selection:
-log_fw[which.min(log_fw$mse_test),]$model
-## Forward selection coefficients:
-best_fw_model <- as.formula("is_open ~ review_count + park_street + full_bar + stars + 
-                             park_lot + amb_trendy + attributes_WiFi + beer_wine + 
-                             attributes_HasTV + price_range + attributes_BikeParking + 
-                             amb_romantic + park_validated + fall + winter + park_valet + 
-                             attributes_GoodForKids + attributes_OutdoorSeating + amb_upscale +  
-                             attributes_RestaurantsDelivery + attributes_RestaurantsGoodForGroups +  
-                             amb_touristy")
-best_fw_model <- lm(best_fw_model, data = data_train)
-coef(best_fw_model)
+varImpPlot(fit_rf)
+
+predicted <- predict(fit_rf, data_test, type="response")
 library(InformationValue)
-predicted_fw<- predict(best_fw_model, data_test, type="response")
-plotROC(data_test$is_open, predicted_fw)
-confusionMatrix(data_test$is_open, predicted_fw)
+plotROC(data_test$is_open, predicted)
+confusionMatrix(data_test$is_open, predicted)
 ```
 
-
-The final forward selection model contained 22 variables. As expected, many of the variables describing the characteristics of the restaurants were included in the model.  From the above results, it is clear that park_lot, stars, attributes_GoodForKids, park_valet, park_street, full_bar, amb_romantic, and amb_trendy have higher correlations to whether the restaurant is open or not. I would say that customers pay more attention to parking in restaurants, rating stars and Kid-friendly. Therefore, the restaurant's open and close have a strong relationship with parking, stars and attributes_GoodForKids.
-The accuracy of forward stepwise regression is almost 73.35%.
+The final random forest model included 30 variables. Using the variable importance plot we can see that the variables related to the attributes of the restaurant are the most predictive. On the plot we can see "summer", "fall", "spring", "winter", "stars", "price_range", are the most predictive with IncNodepurity all higher than 60. We got the accurcy rate for this model is almost 70.3%.
